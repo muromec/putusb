@@ -1,0 +1,42 @@
+Feautures:
+
+* Interactive and noniteractive mode
+* Read data from gen-blob
+* Read data from normal LTE2 bootloader
+* Send data to gen-blob
+* Send direct commands to bootloaders
+
+Example of interactive session:
+
+
+  In [1]: import putusb
+
+Find device
+  In [2]: dev = putusb.MotoUsb()
+
+Query version info using direct command:
+  In [3]: dev.cmd('RQVN')
+  ('\x02RQVN\x03', 2)
+  ('\x02RSVN\x1egen-blob\x03',)
+  Out[3]: '\x02RSVN\x1egen-blob\x03'
+
+Upload data at offset:
+  In [4]: dev.set(0xa0200000,'testword')
+  ('\x02ADDR\x1eA020000093\x03', 2)
+  ('\x02ACK\x1eADDR,A020000093\x03',)
+  ('\x02BIN\x1e\x00\x08testword\x84\x03', 2)
+  ('\x02ACK\x1eBIN\x03',)
+
+Download data from offset:
+  In [5]: dev.get(0xa0200000,8)
+  ('\x02RBIN\x1eA020000000085B\x03', 2)
+  ('\x02RBIN\x1etestword|\x03',)
+  8 8 2686451712
+  Out[5]: 'testword'
+
+Shutdown phone using direct command:
+  In [6]: dev.cmd("POWER_DOWN")
+  ('\x02POWER_DOWN\x03', 2)
+  ('',)
+  Out[6]: ''
+
