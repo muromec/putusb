@@ -5,6 +5,8 @@ Feautures:
 * Read data from normal LTE2 bootloader
 * Send data to gen-blob
 * Send direct commands to bootloaders
+* Flash using gen-blob
+* Qt4 GUI
 
 Example of interactive session:
 
@@ -40,3 +42,11 @@ Shutdown phone using direct command:
   ('',)
   Out[6]: ''
 
+
+Example flash file:
+
+kernel zImage
+root rootfs.jffs2
+
+here "kernel" is named flash partition and "zImage" is filename.
+file "zImage" should exist in same directory as flash file
