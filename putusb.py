@@ -9,6 +9,12 @@ names = {
     'root':(0x002e0000,64094208),
 }
 
+machids = {
+    0:"none",
+    1743:"Motorola A1200",
+    1744:"Motorola E2",
+}
+
 def lolsum(data):
   sum = 0
 

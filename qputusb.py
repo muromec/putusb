@@ -16,39 +16,78 @@ class Main(QtGui.QWidget):
         self.setWindowTitle('Ezx Flash')
 
         find = QtGui.QPushButton("Find device")
-        info = QtGui.QPushButton("Show config")
+        rcfg = QtGui.QPushButton("Read config")
+        wcfg = QtGui.QPushButton("Write config")
         fbtn = QtGui.QPushButton("Flash")
         clr = QtGui.QPushButton("Clear")
         txt = QtGui.QTextEdit()
 
+        cmd = QtGui.QLineEdit()
+        id_select = QtGui.QComboBox()
+
+        idx = 0
+        for machid in putusb.machids:
+          name = putusb.machids[machid]
+          machid = QtCore.QVariant(machid)
+
+          id_select.insertItem(idx,name,machid)
+          idx+=1
+
         self.connect( find, click, self.findDev )
-        self.connect( info, click, self.showInfo )
+        self.connect( rcfg, click, self.showInfo )
+        self.connect( wcfg, click, self.setInfo )
         self.connect( fbtn, click, self.flash )
         self.connect( clr, click, txt.clear )
 
+        vbox = QtGui.QVBoxLayout()
+
+        # first line
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(find)
         hbox.addStretch(1)
-        hbox.addWidget(info)
+        hbox.addWidget(rcfg)
+        hbox.addWidget(wcfg)
         hbox.addWidget(fbtn)
         hbox.addWidget(clr)
 
-        vbox = QtGui.QVBoxLayout()
+        vbox.addLayout(hbox)
+
+        # second line
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(cmd)
+        hbox.addWidget(id_select)
+
         vbox.addLayout(hbox)
 
         txt.setReadOnly(True)
         vbox.addWidget(txt)
 
-        self.log = txt
-
+        # done
         self.setLayout(vbox)
-
         self.resize(300, 150)
+
+        # save for further usage
+        self.log = txt
+        self.cmdline = cmd
+        self.machid = id_select
+
 
     def inf(self, text):
         self.log.append(text)
 
+    def config(self):
+        idx = self.machid.currentIndex()
+        machid,x = self.machid.itemData(idx).toInt()
+
+        cmdline = str(self.cmdline.text())
+
+        self.inf("id: %d"%machid)
+
+        return putusb.encode_params(cmdline, machid)
+
+
     def showInfo(self):
+
         vn = self.dev.cmd("RQVN")
         sn = self.dev.cmd("RQSN")
         self.inf("version: %s"%vn)
@@ -65,12 +104,32 @@ class Main(QtGui.QWidget):
           self.inf("genblob configuration")
 
           line, machid, magic = putusb.decode_params(cfg)
+          self.cmdline.setText(line)
+
+          if machid in putusb.machids:
+            self.inf("known phone")
+            idx = putusb.machids.keys().index(machid)
+            self.machid.setCurrentIndex(idx)
+
+            print idx
 
           self.inf("cmdline: %s"%line)
           self.inf("machine: %d"%machid)
           self.inf("magic: %x"%magic)
         else:
           self.inf("genblob not configured")
+
+    def setInfo(self):
+        cfg = self.config()
+
+        if len(cfg) != 131072:
+          print len(cfg)
+          self.inf("invalid config")
+          return
+
+        self.dev.flash(0x000c0000, cfg)
+
+        self.inf("config set")
 
     def findDev(self):
         try:
