@@ -92,6 +92,8 @@ class MotoUsb:
 
     if self.dev.idProduct == 0xbeef:
       self.read = self.read_genblob
+      self.flash = self.flash_genblob
+      self.flash_file = self.flash_file_genblob
     elif self.dev.idProduct == 0x4903:
       self.read = self.read_lte2
 
@@ -246,7 +248,7 @@ class MotoUsb:
       data = data[chunk:]
       left -= chunk
 
-  def flash(self, addr, data):
+  def flash_genblob(self, addr, data):
     if len(data) % 0x20000:
       crap = '%'*(0x20000 - (len(data) % 0x20000))
       data += crap
@@ -264,7 +266,7 @@ class MotoUsb:
       data = data[chunk:]
       left -= chunk
 
-  def flash_file(self, addr, path):
+  def flash_file_genblob(self, addr, path):
     file = open(path)
 
     while True:

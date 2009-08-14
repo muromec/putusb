@@ -129,6 +129,11 @@ class Main(QtGui.QWidget):
           self.inf("invalid config")
           return
 
+        if 'flash' not in dir(self.dev):
+          self.inf("flashing not supported")
+          # FIXME: should run gen-blob and reinit device here
+          return
+
         self.dev.flash(0x000c0000, cfg)
 
         self.inf("config set")
