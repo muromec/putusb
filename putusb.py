@@ -350,6 +350,26 @@ class MotoUsb:
     else:
       raise IOError
 
+  def serial(self):
+    sn = self.cmd("RQSN")
+
+    if sn[:6] != '\x02RSSN\x1e':
+      return "unknown"
+
+    return sn[6:-1]
+
+  def version(self):
+    vn = self.cmd("RQVN")
+
+    if vn[:6] != '\x02RSVN\x1e':
+      raise IOError
+
+    return vn[6:-1]
+
+  def off(self):
+    self.cmd("POWER_DOWN")
+
+
 
 if __name__ == '__main__':
   dev = MotoUsb()

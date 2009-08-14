@@ -88,10 +88,12 @@ class Main(QtGui.QWidget):
 
     def showInfo(self):
 
-        vn = self.dev.cmd("RQVN")
-        sn = self.dev.cmd("RQSN")
-        self.inf("version: %s"%vn)
-        self.inf("serial: %s"%sn)
+        self.inf("version: %s"%self.dev.version())
+        self.inf("serial: %s"%self.dev.serial())
+
+        if 'read' not in dir(self.dev):
+          self.inf("memory read not supported")
+          return
 
         magic = self.dev.get(0x000c0000+131072-4,4)
         magic = putusb.decode_bytes(magic)
@@ -132,6 +134,8 @@ class Main(QtGui.QWidget):
         self.inf("config set")
 
     def findDev(self):
+        self.log.clear()
+
         try:
           self.dev = putusb.MotoUsb()
           self.inf("device found: %s"%self.dev.name())
