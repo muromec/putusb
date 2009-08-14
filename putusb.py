@@ -248,10 +248,22 @@ class MotoUsb:
       data = data[chunk:]
       left -= chunk
 
-  def flash_genblob(self, addr, data):
+  def fix_data_genblob(self, addr, data):
+    if addr % 0x20000:
+      prefix_len = addr % 0x20000
+      prefix = self.get(addr-prefix_len,prefix_len)
+
+      data = prefix + data
+      addr = addr-prefix_len
+
     if len(data) % 0x20000:
-      crap = '%'*(0x20000 - (len(data) % 0x20000))
-      data += crap
+      data += '%'*(0x20000 - (len(data) % 0x20000))
+
+    return addr,data
+
+  def flash_genblob(self, addr, data):
+
+    addr,data = self.fix_data_genblob(addr,data)
 
     left = len(data)
 
@@ -276,9 +288,7 @@ class MotoUsb:
         print "all"
         break
 
-      if len(data) % 0x20000:
-        crap = '%'*(0x20000 - (len(data) % 0x20000))
-        data += crap
+      addr,data = self.fix_data_genblob(addr,data)
 
       chunk = len(data)
 
