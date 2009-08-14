@@ -23,6 +23,13 @@ Query version info using direct command:
   ('\x02RSVN\x1egen-blob\x03',)
   Out[3]: '\x02RSVN\x1egen-blob\x03'
 
+Query version and serial using api:
+  In [12]: dev.version()
+  Out[12]: 'gen-blob'
+
+  In [13]: dev.serial()
+  Out[13]: 'unknown'
+
 Upload data at offset:
   In [4]: dev.set(0xa0200000,'testword')
   ('\x02ADDR\x1eA020000093\x03', 2)
@@ -42,6 +49,10 @@ Shutdown phone using direct command:
   ('\x02POWER_DOWN\x03', 2)
   ('',)
   Out[6]: ''
+
+Shutdown using api:
+  In [14]: dev.off()
+  device dissappeared
 
 
 Example flash file:
