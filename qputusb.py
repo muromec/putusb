@@ -17,17 +17,20 @@ class Main(QtGui.QWidget):
 
         find = QtGui.QPushButton("Find device")
         info = QtGui.QPushButton("Show config")
+        fbtn = QtGui.QPushButton("Flash")
         clr = QtGui.QPushButton("Clear")
         txt = QtGui.QTextEdit()
 
         self.connect( find, click, self.findDev )
         self.connect( info, click, self.showInfo )
+        self.connect( fbtn, click, self.flash )
         self.connect( clr, click, txt.clear )
 
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(find)
         hbox.addStretch(1)
         hbox.addWidget(info)
+        hbox.addWidget(fbtn)
         hbox.addWidget(clr)
 
         vbox = QtGui.QVBoxLayout()
@@ -75,6 +78,19 @@ class Main(QtGui.QWidget):
           self.inf("device found: %s"%self.dev.name())
         except:
           self.inf("no device")
+
+    def flash(self):
+
+        self.inf("flash")
+
+        fdialog = QtGui.QFileDialog()
+        fdialog.exec_()
+
+        path = str(fdialog.selectedFiles()[0])
+
+        self.inf("going to flash %s"%path)
+
+        self.dev.flash_index(path)
 
 app = QtGui.QApplication(sys.argv)
 w = Main()

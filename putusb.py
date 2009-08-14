@@ -1,7 +1,13 @@
 import usb
+import os
 from time import sleep
 
 moto = 0x22b8
+
+names = {
+    'kernel':(0x000e0000,2097152),
+    'root':(0x002e0000,64094208),
+}
 
 def lolsum(data):
   sum = 0
@@ -252,6 +258,34 @@ class MotoUsb:
       data = data[chunk:]
       left -= chunk
 
+  def flash_file(self, addr, path):
+    file = open(path)
+
+    while True:
+      data = file.read(0x80000)
+
+      if not len(data):
+        print "all"
+        break
+
+      if len(data) % 0x20000:
+        crap = '%'*(0x20000 - (len(data) % 0x20000))
+        data += crap
+
+      chunk = len(data)
+
+      print "flash %d to %x"%(chunk,addr)
+
+      self.set(0xa0400000,data)
+      self.flash_cmd(0xa0400000,addr,chunk)
+
+      addr += chunk
+
+    file.close()
+
+
+
+
   def flash_cmd(self, source, dest, size):
     packet = "%.8X%.8X%.8X"%(source, dest, size)
     packet += "%.2X"%(lolsum(packet))
@@ -271,6 +305,44 @@ class MotoUsb:
     name += " (0x%x)"
     return name%self.dev.idProduct
 
+
+  def flash_index(self,index):
+
+    dir = index[:index.rindex("/")+1]
+
+    file = open(index)
+    contents = file.readlines()
+    file.close()
+
+    for line in  contents:
+      if line[0] == '#':
+        continue
+
+      line = line[:-2]
+
+      dest,path = line.split(' ',1)
+      path = dir+path
+      try:
+        stat = os.stat(path)
+      except:
+        continue
+
+      addr = self.name2addr(dest,stat.st_size)
+
+      print "going to flash %s as %s to 0x%x"%(path,dest,addr)
+
+      self.flash_file(addr,path)
+
+  def name2addr(self,name,size):
+    if name not in names:
+      raise IOError
+
+    addr,size_max = names[name]
+
+    if size <= size_max:
+      return addr
+    else:
+      raise IOError
 
 
 if __name__ == '__main__':
