@@ -258,6 +258,20 @@ class MotoUsb:
 
     resp = self.cmd("FLASH", packet)
 
+  def name(self):
+    pid = self.dev.idProduct
+    if pid == 0xbeef:
+      name = "Gen Blob"
+
+    elif pid == 0x6023:
+      name = "Gen2"
+    else:
+      name = "Unknown"
+
+    name += " (0x%x)"
+    return name%self.dev.idProduct
+
+
 
 if __name__ == '__main__':
   dev = MotoUsb()
