@@ -50,7 +50,7 @@ def decode_bytes(long):
 def encode_bytes(bytes,len=4):
   ret = ''
   for n in xrange(len):
-    mask = ((1<<8)-1) << n*4
+    mask = ((1<<8)-1) << n*8
 
     ret += chr((bytes&mask)>>n*8)
 
@@ -393,6 +393,13 @@ class MotoUsb:
   def off(self):
     self.cmd("POWER_DOWN")
 
+  def run_file(self,path):
+    file = open(path)
+    data = file.read()
+    file.close()
+
+    self.set(0xa0de0000, data)
+    self.jump(0xa0de0000)
 
 
 if __name__ == '__main__':
