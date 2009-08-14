@@ -65,7 +65,12 @@ class MotoUsb:
     while not resp:
       try:
         resp = self.recv()
-      except:
+      except usb.USBError as e:
+
+        if 'No such device' in e.args[0]:
+          print 'device dissappeared'
+          return
+
         sleep(0.1)
 
     return resp
