@@ -93,7 +93,7 @@ class Main(QtGui.QWidget):
 
         if 'read' not in dir(self.dev):
           self.inf("memory read not supported")
-          return
+          self.sendBlob()
 
         magic = self.dev.get(0x000c0000+131072-4,4)
         magic = putusb.decode_bytes(magic)
@@ -131,8 +131,7 @@ class Main(QtGui.QWidget):
 
         if 'flash' not in dir(self.dev):
           self.inf("flashing not supported")
-          # FIXME: should run gen-blob and reinit device here
-          return
+          self.sendBlob()
 
         self.dev.flash(0x000c0000, cfg)
 
@@ -147,6 +146,13 @@ class Main(QtGui.QWidget):
         except:
           self.inf("no device")
 
+    def sendBlob(self):
+        self.dev.set(0xa1000000, putusb.encode_bytes(0x0D3ADCA7))
+        self.dev.run_file("blob")
+
+        while self.dev.dev.idProduct != 0xbeef:
+          self.findDev()
+
     def flash(self):
 
         self.inf("flash")
@@ -157,6 +163,11 @@ class Main(QtGui.QWidget):
         path = str(fdialog.selectedFiles()[0])
 
         self.inf("going to flash %s"%path)
+
+
+        if 'flash' not in dir(self.dev):
+          self.inf("flashing not supported")
+          self.sendBlob()
 
         self.dev.flash_index(path)
 
