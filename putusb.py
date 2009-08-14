@@ -22,6 +22,45 @@ def addr_data(addr):
   addr += "%.2X"%lolsum(addr)
   return addr
 
+def decode_bytes(long):
+  ret = 0
+  off = 0
+
+  while long:
+    ret |= (ord(long[0]) << off)
+
+    off+=8
+    long = long[1:]
+
+  return ret
+
+def encode_bytes(bytes,len=4):
+  ret = ''
+  for n in xrange(len):
+    mask = ((1<<8)-1) << n*4
+
+    ret += chr((bytes&mask)>>n*8)
+
+  return ret
+
+def encode_params(cmdline, machid):
+  all = 0x20000
+
+  data = cmdline
+  data += '\x00'*(all-8-len(cmdline))
+  data += encode_bytes(machid)
+  data += '\x07\xb0\xad\xde' # blob magic
+
+  return data
+
+def decode_params(data):
+  cmdline = data[:data.find('\x00')]
+  machid = decode_bytes(data[-8:-4])
+  magic = decode_bytes(data[-4:])
+
+
+  return cmdline,machid,magic
+
 class MotoUsb:
   def __init__(self):
     for bus in usb.busses():
