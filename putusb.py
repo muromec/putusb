@@ -5,6 +5,7 @@ from time import sleep
 moto = 0x22b8
 
 names = {
+    'gen-blob':(0x000a0000,131072),
     'kernel':(0x000e0000,2097152),
     'root':(0x002e0000,64094208),
 }
@@ -333,10 +334,21 @@ class MotoUsb:
     file.close()
 
     for line in  contents:
-      if line[0] == '#':
+      if not line or line[0] == '#':
         continue
 
-      line = line[:-2]
+      line = line[:-1]
+
+      if '=' in line:
+        name,addresses = line.split("=",1)
+        addr,size = addresses.split(' ',1)
+        addr = int(addr,16)
+        size = int(size)
+
+        names[name] = (addr,size)
+        print names
+
+        continue
 
       dest,path = line.split(' ',1)
       path = dir+path
