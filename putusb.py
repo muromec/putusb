@@ -1,4 +1,5 @@
 import usb
+from time import sleep
 
 moto = 0x22b8
 
@@ -8,7 +9,7 @@ def lolsum(data):
   for b in data:
     sum += ord(b)
 
-    if sum > 256:
+    if sum >= 256:
       sum -= 256
 
   return sum
@@ -43,9 +44,12 @@ class MotoUsb:
     elif self.dev.idProduct == 0x4903:
       self.read = self.read_lte2
 
+    self.dump_s = False
+    self.dump_r = False
+
 
   def send(self, data):
-    print (data,self.ep_out)
+    #print (data,self.ep_out)
     self.handle.bulkWrite(self.ep_out, data)
 
   def recv(self):
@@ -55,7 +59,16 @@ class MotoUsb:
 
   def sr(self, cmd):
     self.send(cmd)
-    return self.recv()
+    sleep(0.1)
+
+    resp = None
+    while not resp:
+      try:
+        resp = self.recv()
+      except:
+        sleep(0.1)
+
+    return resp
 
   def cmd(self, cmd, data = None):
     packet = '\x02'
@@ -67,8 +80,14 @@ class MotoUsb:
 
     packet += '\x03'
 
+    if self.dump_s:
+      print (packet,)
+
     ret =  self.sr(packet)
-    print (ret,)
+
+    if self.dump_r:
+      print (ret,)
+
     return ret
 
   def addr(self, addr):
@@ -120,11 +139,11 @@ class MotoUsb:
     data = ''
 
     while True:
-      chunk = min(left,4096)
+      chunk = min(left,1024*4)
 
       data += self.read(off,chunk)
 
-      print chunk,left,off
+      print "down: %d%% left"%( float(left) / size * 100 )
 
       left -= chunk
       off += chunk
@@ -163,13 +182,37 @@ class MotoUsb:
     left = len(data)
 
     while left:
-      chunk = min(left,4096)
+      chunk = min(left,4*1024)
       self.addr(addr)
       self.bin(data[:chunk])
 
       addr += chunk
-      data = data[:chunk]
+      data = data[chunk:]
       left -= chunk
+
+  def flash(self, addr, data):
+    if len(data) % 0x20000:
+      crap = '%'*(0x20000 - (len(data) % 0x20000))
+      data += crap
+
+    left = len(data)
+
+    while left:
+      chunk = min(left,0x80000)
+      print 'flash %d to %x'%(chunk,addr)
+
+      self.set(0xa0400000,data[:chunk])
+      self.flash_cmd(0xa0400000,addr,chunk)
+
+      addr += chunk
+      data = data[chunk:]
+      left -= chunk
+
+  def flash_cmd(self, source, dest, size):
+    packet = "%.8X%.8X%.8X"%(source, dest, size)
+    packet += "%.2X"%(lolsum(packet))
+
+    resp = self.cmd("FLASH", packet)
 
 
 if __name__ == '__main__':
