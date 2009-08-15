@@ -191,7 +191,7 @@ class Main(QtGui.QWidget):
 
         self.state("loading blob")
         self.dev.set(0xa1000000, putusb.encode_bytes(0x0D3ADCA7))
-        self.dev.run_file("blob")
+        self.dev.run_file("/lib/firmware/ezx/gen-blob")
 
         while self.dev.dev.idProduct != 0xbeef:
           self.findDev()
