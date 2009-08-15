@@ -5,7 +5,7 @@ from time import sleep
 moto = 0x22b8
 
 names = {
-    'gen-blob':(0x000a0000,131072),
+    'gen-blob':(0x000a0800,131072),
     'kernel':(0x000e0000,2097152),
     'root':(0x002e0000,64094208),
 }
