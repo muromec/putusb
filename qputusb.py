@@ -155,6 +155,8 @@ class Main(QtGui.QWidget):
 
     def flash(self):
 
+        self.showInfo()
+
         self.inf("flash")
 
         fdialog = QtGui.QFileDialog()
@@ -163,11 +165,6 @@ class Main(QtGui.QWidget):
         path = str(fdialog.selectedFiles()[0])
 
         self.inf("going to flash %s"%path)
-
-
-        if 'flash' not in dir(self.dev):
-          self.inf("flashing not supported")
-          self.sendBlob()
 
         self.dev.flash_index(path)
 
