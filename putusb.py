@@ -95,6 +95,7 @@ class MotoUsb:
       self.read = self.read_genblob
       self.flash = self.flash_genblob
       self.flash_file = self.flash_file_genblob
+      self.erase = self.erase_genblob
     elif self.dev.idProduct == 0x4903:
       self.read = self.read_lte2
 
@@ -113,19 +114,19 @@ class MotoUsb:
 
   def sr(self, cmd):
     self.send(cmd)
-    sleep(0.1)
 
     resp = None
     while not resp:
       try:
         resp = self.recv()
       except usb.USBError as e:
+        print e
 
         if 'No such device' in e.args[0]:
           print 'device dissappeared'
           return
 
-        sleep(0.1)
+        sleep(0.8)
 
     return resp
 
@@ -213,14 +214,9 @@ class MotoUsb:
     return data
 
   def bin(self, data):
-    if self.dev.idProduct == 0x6023 and len(data) < 4096:
-      print 'gen2 sucks'
-      crap = '%'*(4096 - len(data))
-      data += crap
 
-    if len(data) % 8:
-      print 'unaligned data'
-      crap = '&'*(8 - len(data) % 8)
+    if len(data) < 4096:
+      crap = '%'*(4096 - len(data))
       data += crap
 
     size = len(data)
@@ -232,7 +228,7 @@ class MotoUsb:
     resp = self.cmd('BIN',packet)
 
     if resp != '\x02ACK\x1eBIN\x03':
-      print 'bin resp error'
+      print 'bin resp error', resp
       raise
 
     return True
@@ -242,6 +238,7 @@ class MotoUsb:
 
     while left:
       chunk = min(left,4*1024)
+      print hex(addr)
       self.addr(addr)
       self.bin(data[:chunk])
 
@@ -300,6 +297,8 @@ class MotoUsb:
 
       addr += chunk
 
+      yield addr
+
     file.close()
 
 
@@ -357,11 +356,17 @@ class MotoUsb:
       except:
         continue
 
-      addr = self.name2addr(dest,stat.st_size)
+      start,end = self.name2addr(dest,stat.st_size)
 
-      print "going to flash %s as %s to 0x%x"%(path,dest,addr)
+      print "going to flash %s as %s to 0x%x"%(path,dest,start)
 
-      self.flash_file(addr,path)
+      for current in self.flash_file(start,path):
+        yield start,current,end,dest
+
+      # erase
+      #for current in self.erase(start+stat.st_size,end):
+      #  yield start,current,end,dest
+
 
   def name2addr(self,name,size):
     if name not in names:
@@ -370,7 +375,7 @@ class MotoUsb:
     addr,size_max = names[name]
 
     if size <= size_max:
-      return addr
+      return addr,size_max
     else:
       raise IOError
 
@@ -400,6 +405,18 @@ class MotoUsb:
 
     self.set(0xa0de0000, data)
     self.jump(0xa0de0000)
+
+  def erase_genblob(self,addr,end):
+    self.set(0xa0400000,'\xff'*0x80000)
+
+    while addr < end:
+      self.flash_cmd(0xa0400000,addr,0x80000)
+      print "erased %x"%addr
+
+      addr += 0x80000
+
+      yield addr
+
 
 
 if __name__ == '__main__':
