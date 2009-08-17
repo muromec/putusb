@@ -5,7 +5,7 @@
 import sys
 from PyQt4 import QtGui, QtCore
 import putusb
-from threading import Thread
+from threading import Thread, Lock
 
 from time import sleep
 
@@ -95,6 +95,7 @@ class Main(QtGui.QWidget):
         self.statelbl = statelbl
 
         self.flash = None
+        self.flash_loc = Lock()
 
 
     def inf(self, text):
@@ -202,9 +203,13 @@ class Main(QtGui.QWidget):
     def selectFiles(self):
         print "select files"
         fdialog = QtGui.QFileDialog()
-        fdialog.exec_()
 
-        self.flash = str(fdialog.selectedFiles()[0])
+        if fdialog.exec_():
+          self.flash = str(fdialog.selectedFiles()[0])
+        else:
+          self.flash = False
+
+        self.flash_loc.release()
 
         print "selected"
 
@@ -224,13 +229,15 @@ class Main(QtGui.QWidget):
         # done with suckfull signal-signal-by-slot oops.
         # damn qt and damn python segfaults when 
         # trying to run fdialog from here
+        self.flash_loc.acquire()
         self.emit(QtCore.SIGNAL('select'))
 
-        while self.flash == None:
-          sleep(0.1)
+        # wait for file dialog
+        self.flash_loc.acquire()
+        self.flash_loc.release()
 
         if self.flash == False:
-            self.flash = None
+            print 'canceled'
             return
 
         path = self.flash
@@ -239,7 +246,14 @@ class Main(QtGui.QWidget):
 
         self.state("flashing")
         try:
-          self.dev.flash_index(path)
+          for state in self.dev.flash_index(path):
+            start,current,end,name = state
+            pos = (current-start)/float(end-start)
+            self.state("flashing %s %d%%"%(
+              name,int(pos*100)
+              )
+            )
+
           self.inf("ok")
         except:
           self.inf("fail")
