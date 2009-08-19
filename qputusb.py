@@ -3,6 +3,7 @@
 # boxlayout.py
 
 import sys
+import os
 from PyQt4 import QtGui, QtCore
 import putusb
 from threading import Thread, Lock
@@ -96,6 +97,10 @@ class Main(QtGui.QWidget):
 
         self.flash = None
         self.flash_loc = Lock()
+
+        txt.append("%s running on %s"%(
+          sys.argv[0], os.name)
+        )
 
 
     def inf(self, text):
@@ -192,7 +197,13 @@ class Main(QtGui.QWidget):
 
         self.state("loading blob")
         self.dev.set(0xa1000000, putusb.encode_bytes(0x0D3ADCA7))
-        self.dev.run_file("/lib/firmware/ezx/gen-blob")
+
+        if os.name == 'posix':
+          dir = "/lib/firmware/ezx"
+        else:
+          dir = sys.argv[0]
+
+        self.dev.run_file(dir+os.sep+"gen-blob")
 
         while self.dev.dev.idProduct != 0xbeef:
           self.findDev()
