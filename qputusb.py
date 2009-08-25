@@ -228,7 +228,7 @@ class Main(QtGui.QWidget):
         fdialog = QtGui.QFileDialog()
 
         if fdialog.exec_():
-          self.flash = str(fdialog.selectedFiles()[0])
+          self.flash = unicode(fdialog.selectedFiles()[0])
         else:
           self.flash = False
 
