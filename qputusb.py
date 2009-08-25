@@ -210,10 +210,10 @@ class Main(QtGui.QWidget):
         self.state("loading blob")
         self.dev.set(0xa1000000, putusb.encode_bytes(0x0D3ADCA7))
 
-        if os.name == 'posix':
+        dir = os.curdir
+        if os.name == 'posix' and not os.access('gen-blob',0):
+          print 'no blob in current dir'
           dir = "/lib/firmware/ezx"
-        else:
-          dir = sys.argv[0]
 
         self.dev.run_file(dir+os.sep+"gen-blob")
 
