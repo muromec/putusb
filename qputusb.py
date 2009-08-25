@@ -19,6 +19,9 @@ def bg(func):
 
   return func_bg
 
+signal_inf = QtCore.SIGNAL('inf(QString)')
+signal_state = QtCore.SIGNAL('state(QString)')
+signal_name = QtCore.SIGNAL('name(QString)')
 
 class Main(QtGui.QWidget):
     def __init__(self, parent=None):
@@ -57,6 +60,9 @@ class Main(QtGui.QWidget):
             self, QtCore.SIGNAL('select'),
             self.selectFiles
         )
+        self.connect( self, signal_inf, txt.append )
+        self.connect( self, signal_state, statelbl.setText )
+        self.connect( self, signal_name, namelbl.setText )
 
 
         vbox = QtGui.QVBoxLayout()
@@ -98,17 +104,23 @@ class Main(QtGui.QWidget):
         self.flash = None
         self.flash_loc = Lock()
 
-        txt.append("%s running on %s"%(
+        self.inf( "%s running on %s"%(
           sys.argv[0], os.name)
         )
 
 
     def inf(self, text):
-        self.log.append(text)
-        print text
+        self.emit(signal_inf, text)
+        pass
 
     def state(self, state):
-        self.statelbl.setText(state)
+        self.emit(signal_state, state)
+        pass
+
+    def state_dev(self, device):
+        print device
+        self.emit(signal_name, device)
+        pass
 
     def config(self):
         idx = self.machid.currentIndex()
@@ -188,7 +200,7 @@ class Main(QtGui.QWidget):
         except:
           name = "no device"
 
-        self.name.setText(name)
+        self.state_dev(name)
         self.state("")
 
     def sendBlob(self):
