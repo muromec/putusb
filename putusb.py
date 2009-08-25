@@ -1,5 +1,6 @@
 import usb
 import os
+import sys
 from time import sleep
 
 moto = 0x22b8
@@ -120,7 +121,8 @@ class MotoUsb:
     while not resp:
       try:
         resp = self.recv()
-      except usb.USBError as e:
+      except usb.USBError:
+        _t,e,_x = sys.exc_info()
         print e
 
         if 'No such device' in e.args[0]:
