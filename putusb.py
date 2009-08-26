@@ -87,11 +87,10 @@ class MotoUsb:
     self.handle = self.dev.open()
 
     config = self.dev.configurations[0]
-    self.handle.setConfiguration(config)
+    self.handle.setConfiguration(1)
 
     iface = config.interfaces[0][0]
     self.handle.claimInterface(iface)
-    self.handle.setAltInterface(iface)
 
     if self.dev.idProduct in (0xbeef,0x6003,0x6021):
       self.ep_out = 2
