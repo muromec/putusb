@@ -385,7 +385,7 @@ class MotoUsb:
     addr,size_max = names[name]
 
     if size <= size_max:
-      return addr,size_max
+      return addr,addr+size
     else:
       raise IOError
 
