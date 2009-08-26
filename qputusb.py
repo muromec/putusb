@@ -194,8 +194,17 @@ class Main(QtGui.QWidget):
     @bg
     def findDev(self):
         self.state("looking for device")
+
+        try:
+          self.dev.handle.reset()
+          self.dev.handle.releaseInterface()
+          self.inf("device closed")
+        except:
+          pass
+
         try:
           self.dev = putusb.MotoUsb()
+          self.inf("device opened")
           name = self.dev.name()
         except:
           name = "no device"
