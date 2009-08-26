@@ -409,8 +409,13 @@ class MotoUsb:
     self.cmd("POWER_DOWN")
 
   def run_file(self,path):
+    size = os.stat(path).st_size
     file = open(path)
-    data = file.read()
+
+    data = ''
+
+    while len(data) < size:
+      data += file.read()
     file.close()
 
     self.set(0xa0de0000, data)
