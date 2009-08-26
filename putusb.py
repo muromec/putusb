@@ -286,7 +286,7 @@ class MotoUsb:
       left -= chunk
 
   def flash_file_genblob(self, addr, path):
-    file = open(path)
+    file = open(path,'rb')
 
     while True:
       data = file.read(0x80000)
@@ -409,7 +409,7 @@ class MotoUsb:
 
   def run_file(self,path):
     size = os.stat(path).st_size
-    file = open(path)
+    file = open(path,'rb')
 
     data = ''
 
