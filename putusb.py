@@ -16,14 +16,14 @@ machids = {
     1744:"Motorola E2",
 }
 
-def lolsum(data):
+def lolsum(data,limit=256):
   sum = 0
 
   for b in data:
     sum += ord(b)
 
-    if sum >= 256:
-      sum -= 256
+    if sum >= limit:
+      sum -= limit
 
   return sum
 
@@ -47,12 +47,35 @@ def decode_bytes(long):
 
   return ret
 
+def decode_bytes_be(long):
+  ret = 0
+  off = len(long)*8
+
+  while long:
+    off -= 8
+    ret |= (ord(long[0]) << off)
+
+    long = long[1:]
+
+  return ret
+
 def encode_bytes(bytes,len=4):
   ret = ''
   for n in xrange(len):
     mask = ((1<<8)-1) << n*8
 
     ret += chr((bytes&mask)>>n*8)
+
+  return ret
+
+def encode_bytes_be(bytes,len=4):
+  ret = ''
+  for n in xrange(len):
+    n = len-n-1
+    mask = ((1<<8)-1) << n*8
+
+    ret += chr((bytes&mask)>>n*8)
+
 
   return ret
 
@@ -141,28 +164,32 @@ class MotoUsb:
     packet += '\x03'
 
     if self.dump_s:
-      print (packet,)
+      print 'send:\nHEX:\t%s\nSTR:\t%s'%(
+          packet.encode('hex'),
+          packet
+      )
 
     ret =  self.sr(packet)
 
     if self.dump_r:
-      print (ret,)
+     print '--------\nrecvd:\nHEX:\t%s\nSTR:\t%s\n=======\n'%(
+          ret.encode('hex'),
+          ret
+      )
 
     return ret
 
-  def addr(self, addr):
+  def addr(self, addr, noerr=False):
     data = self.cmd('ADDR',addr_data(addr))
 
+    if noerr:
+      return
+
     if data[:5] != '\x02ACK\x1e':
-      print 'addr answer error'
-      raise
+      raise IOError('addr answer error')
 
     if int(data[10:18],16) != addr:
-      print 'addr value error'
-      raise
-
-    return True
-
+      raise IOError('addr value error')
 
 
   def jump(self, addr):
@@ -188,7 +215,7 @@ class MotoUsb:
     return data
 
   def read_lte2(self, off, size):
-    resp = self.cmd('READ', add_sum("%.8X,%.4X"%(off,size)))
+    resp = self.cmd('READ', "%.8X,%.4X"%(off,size))
 
     data = resp[8:8+size]
 
@@ -233,13 +260,13 @@ class MotoUsb:
 
     return True
 
-  def set(self, addr, data):
+  def set(self, addr, data, noerr=False):
     left = len(data)
 
     while left:
       chunk = min(left,4*1024)
       print hex(addr)
-      self.addr(addr)
+      self.addr(addr, noerr)
       self.bin(data[:chunk])
 
       addr += chunk
