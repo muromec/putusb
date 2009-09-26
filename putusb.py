@@ -444,7 +444,64 @@ class MotoUsb:
 
       yield addr
 
+  def read_ramldr2(self,addr,size):
+    packet = 'R'
+    packet += encode_bytes_be(addr,4)
+    packet += encode_bytes_be(size,4)
 
+    print (packet,)
+    self.send(packet)
+
+    return self.recv()
+
+  def addr_ramldr2(self,addr):
+    packet = 'F'
+    packet += encode_bytes_be(addr,4)
+    print(packet,)
+
+    ret = self.sr(packet)
+    print (ret,)
+
+    return decode_bytes_be(ret)
+
+  def flash_ramldr2(self,addr,data):
+
+    ret = ''
+    while len(data):
+      chunk = self.addr_ramldr2(addr)
+      print "flash %x to addr %x"%(chunk,addr)
+      self.flash_send_ramldr2(data[:chunk])
+
+      data = data[chunk:]
+      addr += chunk
+
+      while True:
+        sleep(0.6)
+        try:
+          ret += self.recv()
+          break
+        except:
+          pass
+
+      sleep(2)
+
+
+    return ret
+
+
+  def flash_send_ramldr2(self,data):
+
+    all = len(data)
+    sent = 0
+    while len(data):
+      ret = self.sr(data[:1024])
+
+      data = data[1024:]
+      sent += 1024
+
+      if ret != '_OK':
+        print (ret,)
+        print "sent %x of %x"%(sent,all)
 
 if __name__ == '__main__':
   dev = MotoUsb()
