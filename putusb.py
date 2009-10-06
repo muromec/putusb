@@ -109,10 +109,10 @@ class MotoUsb:
 
     if self.dev.idProduct in (0xbeef,0x6003,0x6021):
       self.ep_out = 2
-      self.ep_in = 1
+      self.ep_in = 0x81
     else:
       self.ep_out = 1
-      self.ep_in = 2
+      self.ep_in = 0x82
 
     if self.dev.idProduct == 0xbeef:
       self.read = self.read_genblob
@@ -248,7 +248,7 @@ class MotoUsb:
 
     size = len(data)
 
-    packet = chr(size>>8) + chr(size&0xf)
+    packet = chr(size>>8) + chr(size&0xff)
     packet += data
     packet += chr(lolsum(packet))
 
