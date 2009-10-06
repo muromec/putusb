@@ -13,7 +13,8 @@ names = {
 
 machids = {
     0:"none",
-    1743:"Motorola A1200",
+    1743:"Motorola E6",
+    1742:"Motorola A1200",
     1744:"Motorola E2",
 }
 
