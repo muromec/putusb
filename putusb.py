@@ -1,5 +1,6 @@
 import usb
 import os
+import sys
 from time import sleep
 
 moto = 0x22b8
@@ -107,6 +108,12 @@ class MotoUsb:
 
     self.handle = self.dev.open()
 
+    config = self.dev.configurations[0]
+    self.handle.setConfiguration(1)
+
+    iface = config.interfaces[0][0]
+    self.handle.claimInterface(iface)
+
     if self.dev.idProduct in (0xbeef,0x6003,0x6021):
       self.ep_out = 2
       self.ep_in = 0x81
@@ -142,7 +149,8 @@ class MotoUsb:
     while not resp:
       try:
         resp = self.recv()
-      except usb.USBError as e:
+      except usb.USBError:
+        _t,e,_x = sys.exc_info()
         print e
 
         if 'No such device' in e.args[0]:
@@ -304,7 +312,7 @@ class MotoUsb:
       left -= chunk
 
   def flash_file_genblob(self, addr, path):
-    file = open(path)
+    file = open(path,'rb')
 
     while True:
       data = file.read(0x80000)
@@ -402,7 +410,7 @@ class MotoUsb:
     addr,size_max = names[name]
 
     if size <= size_max:
-      return addr,size_max
+      return addr,addr+size
     else:
       raise IOError
 
@@ -426,8 +434,13 @@ class MotoUsb:
     self.cmd("POWER_DOWN")
 
   def run_file(self,path):
-    file = open(path)
-    data = file.read()
+    size = os.stat(path).st_size
+    file = open(path,'rb')
+
+    data = ''
+
+    while len(data) < size:
+      data += file.read()
     file.close()
 
     self.set(0xa0de0000, data)
