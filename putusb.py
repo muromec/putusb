@@ -100,6 +100,8 @@ def decode_params(data):
   return cmdline,machid,magic
 
 class MotoUsb:
+  BIN_CHUNK = 4096
+  GET_CNUNK = 4096
   def __init__(self):
     for bus in usb.busses():
         for dev in bus.devices:
@@ -230,12 +232,18 @@ class MotoUsb:
 
     return data
 
+  def read_ramldr1(self, off, size):
+    if size != 256:
+      raise IOError("incorrect size %x" % size)
+
+    return self.cmd("DUMP", "%.8X" % off)
+
   def get(self, off, size):
     left = size
     data = ''
 
     while True:
-      chunk = min(left,1024*4)
+      chunk = min(left,self.GET_CNUNK)
 
       data += self.read(off,chunk)
 
@@ -249,10 +257,10 @@ class MotoUsb:
 
     return data
 
-  def bin(self, data):
+  def bin(self, data, noerr=False):
 
-    if len(data) < 4096:
-      crap = '%'*(4096 - len(data))
+    if len(data) < self.BIN_CHUNK:
+      crap = '%'*(self.BIN_CHUNK - len(data))
       data += crap
 
     size = len(data)
@@ -263,7 +271,7 @@ class MotoUsb:
 
     resp = self.cmd('BIN',packet)
 
-    if resp != '\x02ACK\x1eBIN\x03':
+    if not noerr and resp != '\x02ACK\x1eBIN\x03':
       print 'bin resp error', resp
       raise
 
@@ -273,10 +281,10 @@ class MotoUsb:
     left = len(data)
 
     while left:
-      chunk = min(left,4*1024)
+      chunk = min(left,self.BIN_CHUNK)
       print hex(addr)
       self.addr(addr, noerr)
-      self.bin(data[:chunk])
+      self.bin(data[:chunk], noerr)
 
       addr += chunk
       data = data[chunk:]
@@ -466,7 +474,15 @@ class MotoUsb:
     print (packet,)
     self.send(packet)
 
-    return self.recv()
+    data = ''
+    while len(data) < size:
+      chunk = self.recv()
+      if not chunk:
+        raise IOError("agggr")
+
+      data += chunk
+
+    return data
 
   def addr_ramldr2(self,addr):
     packet = 'F'
