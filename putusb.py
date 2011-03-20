@@ -3,8 +3,6 @@ import os
 import sys
 from time import sleep
 
-moto = 0x22b8
-
 names = {
     'gen-blob':(0x000a0800,131072),
     'kernel':(0x000e0000,2097152),
@@ -99,42 +97,31 @@ def decode_params(data):
 
   return cmdline,machid,magic
 
-class MotoUsb:
-  BIN_CHUNK = 4096
-  GET_CNUNK = 4096
-  def __init__(self):
+class Usb(object):
+
+  dev = None
+
+  def find(self, vendor):
     for bus in usb.busses():
         for dev in bus.devices:
-          if dev.idVendor == moto:
+          if dev.idVendor == vendor:
             self.dev = dev
             break
 
-    self.handle = self.dev.open()
-
-    config = self.dev.configurations[0]
-    self.handle.setConfiguration(1)
-
-    iface = config.interfaces[0][0]
-    self.handle.claimInterface(iface)
-
-    if self.dev.idProduct in (0xbeef,0x6003,0x6021):
-      self.ep_out = 2
-      self.ep_in = 0x81
+        if self.dev:
+          break
     else:
-      self.ep_out = 1
-      self.ep_in = 0x82
+      raise IOError("no device found")
 
-    if self.dev.idProduct == 0xbeef:
-      self.read = self.read_genblob
-      self.flash = self.flash_genblob
-      self.flash_file = self.flash_file_genblob
-      self.erase = self.erase_genblob
-    elif self.dev.idProduct == 0x4903:
-      self.read = self.read_lte2
+  def __init__(self, vendor=None):
+    self.find(vendor or self.VENDOR)
+
+    self.setup_ep()
+
+    self.handle = self.dev.open()
 
     self.dump_s = False
     self.dump_r = False
-
 
   def send(self, data):
     #print (data,self.ep_out)
@@ -163,6 +150,39 @@ class MotoUsb:
         sleep(0.8)
 
     return resp
+
+
+
+class MotoUsb(Usb):
+  BIN_CHUNK = 4096
+  GET_CNUNK = 4096
+
+  VENDOR = 0x22b8
+
+  def __init__(self,):
+    super(MotoUsb, self).__init__(self)
+
+    config = self.dev.configurations[0]
+    self.handle.setConfiguration(1)
+
+    iface = config.interfaces[0][0]
+    self.handle.claimInterface(iface)
+
+    if self.dev.idProduct == 0xbeef:
+      self.read = self.read_genblob
+      self.flash = self.flash_genblob
+      self.flash_file = self.flash_file_genblob
+      self.erase = self.erase_genblob
+    elif self.dev.idProduct == 0x4903:
+      self.read = self.read_lte2
+
+  def setup_ep(self):
+    if self.dev.idProduct in (0xbeef,0x6003,0x6021):
+      self.ep_out = 2
+      self.ep_in = 0x81
+    else:
+      self.ep_out = 1
+      self.ep_in = 0x82
 
   def cmd(self, cmd, data = None):
     packet = '\x02'
@@ -532,6 +552,28 @@ class MotoUsb:
       if ret != '_OK':
         print (ret,)
         print "sent %x of %x"%(sent,all)
+
+class NvidiaUsb(Usb):
+  VENDOR = 0x0955
+  def setup_ep(self):
+    self.ep_out = 1
+    self.ep_in = 0x81
+
+  def recv(self):
+    ret = super(NvidiaUsb, self).recv()
+    print ret.encode('hex')
+    return ret
+
+  def send_hex(self, data):
+    data = data.replace(' ','')
+    return self.send(data.decode('hex'))
+
+  def send(self, data):
+    print 'send', len(data), data.encode('hex')
+
+    return super(NvidiaUsb, self).send(data)
+
+
 
 if __name__ == '__main__':
   dev = MotoUsb()
