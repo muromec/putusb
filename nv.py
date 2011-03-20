@@ -1,6 +1,7 @@
 import putusb
 import struct
 import os
+from time import sleep
 
 crap = '04040000a5e119fb4b1f96a46f0d37cae721f42300000000000000000000000000000000060000000404000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000080'
 crap = crap.decode('hex')
@@ -14,10 +15,11 @@ class Dev(object):
   def send(self,data):
     if len(data) < 100:
       print data.encode('hex')
-    pass
+    else:
+      print len(data)
 
   def send_hex(self,data):
-    pass
+    self.send(data.decode('hex'))
 
 dev = Dev()
 
@@ -27,7 +29,7 @@ dev.recv()
 dev.send(crap)
 dev.recv()
 
-f = open('pre_boot.bin','rb')
+f = open('bin/tegra_pre_boot.bin','rb')
 
 while True:
   chunk = f.read(4096)
@@ -49,7 +51,17 @@ dev.recv()
 dev.send_hex('010000000400000000000000fbffffff')
 dev.recv()
 dev.send_hex('010000000400000001000000faffffff')
+#              010000000100000001000000100000000500000050480e0000000000008010000080100022feffff.
 dev.send_hex('010000000100000001000000100000000500000050480e0000000000008010000080100022feffff')
+#dev.send_hex ('010000000100000001000000100000000500000050380e0000000000008010000080100032feffff')
+while True:
+  sleep(0.5)
+  try:
+    dev.recv()
+    break
+  except:
+    print 'err'
+
 dev.recv()
 dev.send_hex('010000000400000002000000f9ffffff')
 
@@ -60,6 +72,8 @@ def send_loader(f, num):
   f.size-=chunk
 
   count = sum([ord(_x) for _x in data]) - 1
+
+  dev.send(data)
 
   def send_sum():
     dev.send(struct.pack('I',  0xffffffff ^ count))
@@ -73,9 +87,17 @@ def send_loader(f, num):
 
     count += sum([ord(_x) for _x in data])
 
+    sleep(0.1)
+    dev.send(data)
+
   send_sum()
 
-  dev.recv()
+  while True:
+    try:
+      dev.recv()
+      break
+    except:
+      print 'err'
 
   return True
 
@@ -84,9 +106,28 @@ class Boot(object):
     self.file = open(name, 'rb')
     self.size = os.stat(name).st_size
 
-fastboot = Boot('fastboot.stock.bin')
+fastboot = Boot('bin/fastboot.stock.bin')
 
 _num = 2
 while send_loader(fastboot, _num):
   _num+=1
+  sleep(0.3)
+
+dev.recv()
+
+while True:
+  try:
+    dev.recv()
+    break
+  except:
+    print 'err'
+    sleep(0.3)
+
+dev.send_hex("010000000400000000000000fbffffff")
+dev.send_hex("0100000001000000110000000000000018000000d5ffffff")
+
+dev.recv()
+dev.recv()
+
+dev.send_hex("010000000400000001000000faffffff")
 

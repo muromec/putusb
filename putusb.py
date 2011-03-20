@@ -569,7 +569,10 @@ class NvidiaUsb(Usb):
     return self.send(data.decode('hex'))
 
   def send(self, data):
-    print 'send', len(data), data.encode('hex')
+    if len(data) < 1024:
+      print 'send', len(data), data.encode('hex')
+    else:
+      print 'send', len(data)
 
     return super(NvidiaUsb, self).send(data)
 
