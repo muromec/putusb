@@ -25,9 +25,11 @@ dev = Dev()
 
 dev = putusb.NvidiaUsb()
 
-dev.recv()
-dev.send(crap)
-dev.recv()
+dev.recv() # gets uuid
+
+# version check? who cares
+#dev.send(crap)
+#dev.recv()
 
 f = open('bin/tegra_pre_boot.bin','rb')
 
@@ -44,7 +46,14 @@ dev.recv()
 dev.send_hex('0100000001000000000000000000000001000000fdffffff')
 
 dev.recv()
-dev.recv()
+while True:
+  try:
+    dev.recv() # here can fail
+    break
+  except:
+    print 'err'
+    sleep(0.2)
+
 dev.recv()
 dev.recv()
 
@@ -55,12 +64,13 @@ dev.send_hex('010000000400000001000000faffffff')
 dev.send_hex('010000000100000001000000100000000500000050480e0000000000008010000080100022feffff')
 #dev.send_hex ('010000000100000001000000100000000500000050380e0000000000008010000080100032feffff')
 while True:
-  sleep(0.5)
   try:
     dev.recv()
     break
   except:
     print 'err'
+
+  sleep(0.1)
 
 dev.recv()
 dev.send_hex('010000000400000002000000f9ffffff')
@@ -87,7 +97,6 @@ def send_loader(f, num):
 
     count += sum([ord(_x) for _x in data])
 
-    sleep(0.1)
     dev.send(data)
 
   send_sum()
@@ -111,7 +120,6 @@ fastboot = Boot('bin/fastboot.stock.bin')
 _num = 2
 while send_loader(fastboot, _num):
   _num+=1
-  sleep(0.3)
 
 dev.recv()
 
