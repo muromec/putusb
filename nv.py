@@ -3,11 +3,6 @@ import struct
 import os
 from time import sleep
 
-crap = '04040000a5e119fb4b1f96a46f0d37cae721f42300000000000000000000000000000000060000000404000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000080'
-crap = crap.decode('hex')
-
-crap = crap + '\x00'*(1028-len(crap))
-
 class Dev(object):
   def recv(self):
     pass
@@ -26,10 +21,6 @@ dev = Dev()
 dev = putusb.NvidiaUsb()
 
 dev.recv() # gets uuid
-
-# version check? who cares
-#dev.send(crap)
-#dev.recv()
 
 f = open('bin/tegra_pre_boot.bin','rb')
 
