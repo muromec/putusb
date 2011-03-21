@@ -100,6 +100,8 @@ def decode_params(data):
 class Usb(object):
 
   dev = None
+  RTIMEOUT = 100
+  WTIMEOUT = 100
 
   def find(self, vendor):
     for bus in usb.busses():
@@ -125,10 +127,10 @@ class Usb(object):
 
   def send(self, data):
     #print (data,self.ep_out)
-    self.handle.bulkWrite(self.ep_out, data)
+    self.handle.bulkWrite(self.ep_out, data, self.WTIMEOUT)
 
   def recv(self):
-    bytes = self.handle.bulkRead(self.ep_in, 8192)
+    bytes = self.handle.bulkRead(self.ep_in, 8192, self.RTIMEOUT)
     return reduce(lambda a,s: a+chr(s), bytes, '')
 
 
@@ -555,6 +557,7 @@ class MotoUsb(Usb):
 
 class NvidiaUsb(Usb):
   VENDOR = 0x0955
+  RTIMEOUT = 500
   def setup_ep(self):
     self.ep_out = 1
     self.ep_in = 0x81
