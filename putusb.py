@@ -2,6 +2,7 @@ import usb
 import os
 import sys
 from time import sleep
+import struct
 
 names = {
     'gen-blob':(0x000a0800,131072),
@@ -578,6 +579,20 @@ class NvidiaUsb(Usb):
       print 'send', len(data)
 
     return super(NvidiaUsb, self).send(data)
+
+  def send_pack(self, *args):
+
+    data = struct.pack('I'*len(args), *args)
+
+    return self.send(data)
+
+  def send_cmd(self, *args):
+    lolcs = 0xFFFFFFFF
+
+    args = (1,) + args + (lolcs-sum(args),)
+
+    return self.send_pack(*args)
+
 
 
 
