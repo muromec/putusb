@@ -16,6 +16,13 @@ class Dev(object):
   def send_hex(self,data):
     self.send(data.decode('hex'))
 
+class Boot(object):
+  def __init__(self, name):
+    self.file = open(name, 'rb')
+    self.size = os.stat(name).st_size
+
+
+
 dev = Dev()
 
 dev = putusb.NvidiaUsb()
@@ -34,7 +41,7 @@ while True:
 
 dev.recv()
 
-dev.send_hex('0100000001000000000000000000000001000000fdffffff')
+dev.send_cmd(1,0,0,1)
 
 dev.recv()
 while True:
@@ -48,12 +55,13 @@ while True:
 dev.recv()
 dev.recv()
 
-dev.send_hex('010000000400000000000000fbffffff')
+dev.send_cmd(4,0,)
 dev.recv()
-dev.send_hex('010000000400000001000000faffffff')
-#              010000000100000001000000100000000500000050480e0000000000008010000080100022feffff.
-dev.send_hex('010000000100000001000000100000000500000050480e0000000000008010000080100022feffff')
-#dev.send_hex ('010000000100000001000000100000000500000050380e0000000000008010000080100032feffff')
+dev.send_cmd(4,1,)
+
+fastboot = Boot('bin/fastboot.stock.bin')
+
+dev.send_pack(1, 1,1,0x10,5,fastboot.size, 0, 0x108000, 0x108000,0xfffffe22)
 while True:
   try:
     dev.recv()
@@ -64,7 +72,7 @@ while True:
   sleep(0.1)
 
 dev.recv()
-dev.send_hex('010000000400000002000000f9ffffff')
+dev.send_cmd(4,2)
 
 
 def send_loader(f, num):
@@ -101,13 +109,6 @@ def send_loader(f, num):
 
   return True
 
-class Boot(object):
-  def __init__(self, name):
-    self.file = open(name, 'rb')
-    self.size = os.stat(name).st_size
-
-fastboot = Boot('bin/fastboot.stock.bin')
-
 _num = 2
 while send_loader(fastboot, _num):
   _num+=1
@@ -122,11 +123,10 @@ while True:
     print 'err'
     sleep(0.3)
 
-dev.send_hex("010000000400000000000000fbffffff")
-dev.send_hex("0100000001000000110000000000000018000000d5ffffff")
+dev.send_cmd(4,0)
+dev.send_cmd(1, 0x11, 0, 0x18)
 
 dev.recv()
 dev.recv()
 
-dev.send_hex("010000000400000001000000faffffff")
-
+dev.send_cmd(4,1)
