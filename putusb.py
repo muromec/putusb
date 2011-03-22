@@ -556,6 +556,51 @@ class MotoUsb(Usb):
         print (ret,)
         print "sent %x of %x"%(sent,all)
 
+class LoadState(object):
+
+  CHUNK = 0x10000
+  FLUSH = 16
+
+  def __init__(self, filename,):
+    self.f = open(filename, 'rb')
+    self.size = os.stat(filename).st_size
+    self.chunknum = 1
+
+
+  def __delete__(self):
+    self.f.close()
+
+
+  def counted(self):
+    return struct.pack('I',  0xffffffff ^ self.checksum)
+
+  def count(self, data):
+
+    self.checksum += sum([ord(_x) for _x in data])
+
+    return data
+
+  def feed(self):
+    chunk = min(self.CHUNK, self.size)
+    self.size -= chunk
+    self.chunknum += 1
+    self.checksum = -1
+
+    data = struct.pack("IIII", 1, 2, self.chunknum, chunk)
+    yield self.count(data)
+
+    for x in range(self.FLUSH):
+      data = self.f.read(4096)
+
+      if not data:
+        break
+
+      self.count(data)
+      yield data
+
+    yield self.counted()
+
+
 class NvidiaUsb(Usb):
   VENDOR = 0x0955
   RTIMEOUT = 500
@@ -564,36 +609,63 @@ class NvidiaUsb(Usb):
     self.ep_in = 0x81
 
   def recv(self):
-    ret = super(NvidiaUsb, self).recv()
+    for x in xrange(20):
+      try:
+        ret = super(NvidiaUsb, self).recv()
+        break
+      except usb.USBError, e:
+        print e
+        sleep(0.2)
+    else:
+      raise e
+
     print ret.encode('hex')
     return ret
 
-  def send_hex(self, data):
-    data = data.replace(' ','')
-    return self.send(data.decode('hex'))
-
-  def send(self, data):
-    if len(data) < 1024:
-      print 'send', len(data), data.encode('hex')
-    else:
-      print 'send', len(data)
-
-    return super(NvidiaUsb, self).send(data)
-
-  def send_pack(self, *args):
+  def send_pack(self, *args, **kw):
 
     data = struct.pack('I'*len(args), *args)
+
+    if kw.get('cs'):
+      cs = 0xFFFFFFFF
+
+      cs -= sum([ord(x) for x in data]) - 1
+
+      data += struct.pack("I", cs)
 
     return self.send(data)
 
   def send_cmd(self, *args):
-    lolcs = 0xFFFFFFFF
+    args = (1,) + args
 
-    args = (1,) + args + (lolcs-sum(args),)
-
-    return self.send_pack(*args)
+    return self.send_pack(cs=True, *args)
 
 
+  def send_pre(self, filename):
+    f = open(filename, 'rb')
+
+    while True:
+      data = f.read(4096)
+
+      if not data:
+        break
+
+      self.send(data)
+
+    self.recv()
+
+  def send_loader(self, filename):
+    state = LoadState(filename)
+
+    self.send_cmd(1,1,0x10,5, state.size,0, 0x108000,0x108000)
+    self.recv()
+    self.recv()
+
+    self.send_cmd(4,2)
+
+    while state.size:
+      map(self.send, state.feed())
+      self.recv()
 
 
 if __name__ == '__main__':
