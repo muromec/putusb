@@ -561,10 +561,10 @@ class LoadState(object):
   CHUNK = 0x10000
   FLUSH = 16
 
-  def __init__(self, filename,):
+  def __init__(self, filename,n=2):
     self.f = open(filename, 'rb')
     self.size = os.stat(filename).st_size
-    self.chunknum = 1
+    self.chunknum = n
 
 
   def __delete__(self):
@@ -583,10 +583,10 @@ class LoadState(object):
   def feed(self):
     chunk = min(self.CHUNK, self.size)
     self.size -= chunk
-    self.chunknum += 1
     self.checksum = -1
 
     data = struct.pack("IIII", 1, 2, self.chunknum, chunk)
+    self.chunknum += 1
     yield self.count(data)
 
     for x in range(self.FLUSH):
@@ -604,6 +604,8 @@ class LoadState(object):
 class NvidiaUsb(Usb):
   VENDOR = 0x0955
   RTIMEOUT = 500
+  WTIMEOUT = 300
+
   def __init__(self):
     self.recv_ack_num = 0
     self.send_ack_num = 0
@@ -663,7 +665,7 @@ class NvidiaUsb(Usb):
       print 'invalid cmd'
 
     if numbers[1] != 4:
-      print 'not ack'
+      print 'not ack', numbers
 
     if numbers[2] != self.recv_ack_num:
       print 'invalid ack sequence got %r, want %d' % (numbers,
@@ -802,7 +804,26 @@ class NvidiaUsb(Usb):
 
     self.send_ack()
 
+  def flash_part(self, part, filename):
 
+    state = LoadState(filename, 1)
+
+    self.recv_ack_num = 0
+    self.cmd(1,0,0xc,0xe,part,state.size,0)
+
+    # use with: magic here?
+    _WTIMEOUT = self.WTIMEOUT
+    self.WTIMEOUT = 1000
+
+    while state.size:
+      map(self.send, state.feed())
+      self.recv_ack()
+
+    self.WTIMEOUT = _WTIMEOUT
+
+    print self.recv_unpack() # wtf?
+
+    self.send_ack()
 
 if __name__ == '__main__':
   dev = MotoUsb()
