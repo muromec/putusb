@@ -604,9 +604,34 @@ class LoadState(object):
 class NvidiaUsb(Usb):
   VENDOR = 0x0955
   RTIMEOUT = 500
+  def __init__(self):
+    self.recv_ack_num = 0
+    self.send_ack_num = 0
+
+    super(NvidiaUsb, self).__init__()
+
   def setup_ep(self):
     self.ep_out = 1
     self.ep_in = 0x81
+
+  def boot(self, pre, loader):
+
+    print 'uuid', self.recv().encode('hex')
+    print 'sending pre-loader'
+    self.send_pre(pre)
+
+    #self.unk_1_0_0_1()
+
+    # hmmmm... before commenting 1 0 0 1 first
+    # ack was 0
+    self.recv_ack_num = 1
+
+    print 'sending loader'
+    self.send_loader(loader)
+
+    #self.unk_1_11_0_18()
+
+    return True
 
   def recv(self):
     for x in xrange(20):
@@ -619,8 +644,35 @@ class NvidiaUsb(Usb):
     else:
       raise e
 
-    print ret.encode('hex')
     return ret
+
+  def recv_unpack(self):
+    data = self.recv()
+    numbers = struct.unpack("I"*(len(data)/4),data)
+    print numbers
+
+    return numbers
+
+  def recv_ack(self):
+    numbers = self.recv_unpack()
+
+    if numbers[0] != 1:
+      print 'invalid cmd'
+
+    if numbers[1] != 4:
+      print 'not ack'
+
+    if numbers[2] != self.recv_ack_num:
+      print 'invalid ack sequence got %r, want %d' % (numbers,
+          self.recv_ack_num)
+    else:
+      self.recv_ack_num += 1
+
+    # TODO: checksum
+
+  def send_ack(self):
+    self.send_cmd(4,self.send_ack_num)
+    self.send_ack_num+=1
 
   def send_pack(self, *args, **kw):
 
@@ -640,6 +692,9 @@ class NvidiaUsb(Usb):
 
     return self.send_pack(cs=True, *args)
 
+  def cmd(self, *args):
+    self.send_cmd(*args)
+    self.recv_ack()
 
   def send_pre(self, filename):
     f = open(filename, 'rb')
@@ -652,20 +707,48 @@ class NvidiaUsb(Usb):
 
       self.send(data)
 
-    self.recv()
+    self.recv_unpack()
 
   def send_loader(self, filename):
     state = LoadState(filename)
 
-    self.send_cmd(1,1,0x10,5, state.size,0, 0x108000,0x108000)
-    self.recv()
-    self.recv()
-
-    self.send_cmd(4,2)
+    self.cmd(1,1,0x10,5, state.size,0, 0x108000,0x108000)
+    print self.recv_unpack()
+    self.send_ack()
 
     while state.size:
       map(self.send, state.feed())
-      self.recv()
+      self.recv_ack()
+
+
+    self.send_ack_num=0
+
+    print self.recv_unpack()
+    self.send_ack()
+
+  # issued after sending loader
+  def unk_1_11_0_18(self):
+    self.cmd(1, 0x11, 0, 0x18)
+
+    print self.recv_unpack()
+
+    self.send_ack()
+
+
+  # issued before sending loader
+  def unk_1_0_0_1(self):
+    self.cmd(1,0,0,1)
+
+    print self.recv_unpack()
+    print self.recv_unpack()
+    print self.recv_unpack()
+
+    self.send_ack()
+
+    print self.recv_unpack()
+    self.send_ack()
+
+
 
 
 if __name__ == '__main__':
