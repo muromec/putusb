@@ -646,10 +646,13 @@ class NvidiaUsb(Usb):
 
     return ret
 
-  def recv_unpack(self):
+  def recv_unpack(self, fmt="I"):
     data = self.recv()
-    numbers = struct.unpack("I"*(len(data)/4),data)
-    print numbers
+
+    size = struct.calcsize(fmt)
+    nums = len(data)/size
+
+    numbers = struct.unpack(fmt*nums,data)
 
     return numbers
 
@@ -748,6 +751,56 @@ class NvidiaUsb(Usb):
     print self.recv_unpack()
     self.send_ack()
 
+
+  def sync_acks_part_info(self, part):
+    self.cmd(1,0,4,0xf,part) # 3 is for third part?
+
+    acks = self.recv_unpack() # 1, 2, send ack, recv ack(?)
+
+    print acks
+    print 's', self.send_ack_num
+    print 'r', self.send_ack_num
+
+    self.send_ack_num = acks[2]
+    #self.recv_ack_num = acks[3]+1
+
+    print 'partition info'
+    size, off = self.recv_unpack("L") # size and offset, two long ints
+
+    print 'checksum'
+    print self.recv_unpack() # one int (checksum?)
+
+    self.send_ack()
+
+    print self.recv_unpack()
+    self.send_ack()
+
+    return size,off
+
+
+  def read_part(self, part, size):
+    # actual read code
+    self.send_cmd(1,1,0x14,0x11,part,0,0,size,0)
+
+    print self.recv_unpack() # its ack?
+    print self.recv_unpack() # wtf?
+
+    while size:
+      chunk_size = min(LoadState.CHUNK, size)
+      while chunk_size:
+        ret = self.recv()
+        chunk_size -= len(ret)
+        size -= len(ret)
+
+        yield ret
+
+      cs = self.recv()
+      assert len(cs) == 4
+      print cs.encode('hex')
+      self.send_ack()
+      print self.recv_unpack() # wtf?
+
+    self.send_ack()
 
 
 
