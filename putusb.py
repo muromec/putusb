@@ -752,7 +752,7 @@ class NvidiaUsb(Usb):
     self.send_ack()
 
 
-  def sync_acks_part_info(self, part):
+  def part_info(self, part):
     self.cmd(1,0,4,0xf,part) # 3 is for third part?
 
     acks = self.recv_unpack() # 1, 2, send ack, recv ack(?)

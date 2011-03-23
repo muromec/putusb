@@ -7,7 +7,7 @@ print 'LOADED'
 
 part = 8
 
-size, off = dev.sync_acks_part_info(part=part)
+size, off = dev.part_info(part=part)
 
 f = open("crap2", 'wb')
 f.truncate()
