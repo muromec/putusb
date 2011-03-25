@@ -2,11 +2,13 @@ import sys
 import os
 from PyQt4 import QtGui, QtCore
 
-class Main(QtGui.QWidget):
+def test_connection():
+    time.sleep(10)
+
+class ConnectionWidget(QtGui.QWidget):
+
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
-
-        self.setWindowTitle('Test window')
 
         hbox = QtGui.QHBoxLayout()
 
@@ -18,8 +20,26 @@ class Main(QtGui.QWidget):
 
         self.setLayout(hbox)
 
+class FlashingWidget(QtGui.QWidget):
+
+    def __init__(self, parent=None):
+        QtGui.QWidget.__init__(self, parent)
+
+class QPWindow(QtGui.QMainWindow):
+
+    def __init__(self, parent=None):
+        QtGui.QMainWindow.__init__(self, parent)
+
+        self.setWindowTitle('PutUSB')
+
+        self.conn_widget = ConnectionWidget()
+        self.flsh_widget = FlashingWidget()
+
+        self.setCentralWidget(self.conn_widget)
+
+
 app = QtGui.QApplication(sys.argv)
-win = Main()
+win = QPWindow()
 win.show()
 sys.exit(app.exec_())
 
