@@ -1,23 +1,24 @@
 import sys
 import os
 import time
+import threading
+
 from PyQt4 import QtGui, QtCore
-from threading import Thread
 
 def bg(func):
   def func_bg(*args):
 
-    t = Thread(target=func, args=args)
+    t = threading.Thread(target=func, args=args)
     t.setDaemon(True)
     t.start()
 
   return func_bg
 
 @bg
-def wait_connection():
+def connect(event):
     time.sleep(4)
     print "connected"
-    return True
+    event.set()
 
 class ConnectionWidget(QtGui.QWidget):
 
@@ -80,10 +81,13 @@ class PUApplication(QtGui.QApplication):
     def run_(self):
         self.win.show()
 
-        if wait_connection():
-            self.conn_widget.show_connected()
-            time.sleep(2)
-            self.win.setCentralWidget(self.flsh_widget)
+        wevent = threading.Event()
+        connect(wevent)
+        wevent.wait()
+
+        self.conn_widget.show_connected()
+        time.sleep(2)
+        self.win.setCentralWidget(self.flsh_widget)
 
 app = PUApplication(sys.argv)
 app.run_()
