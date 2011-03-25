@@ -78,8 +78,10 @@ class PUApplication(QtGui.QApplication):
 
         self.win.setCentralWidget(self.conn_widget)
 
-    def run_(self):
         self.win.show()
+
+    @bg
+    def run_(self):
 
         wevent = threading.Event()
         connect(wevent)
