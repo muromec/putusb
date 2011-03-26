@@ -3,6 +3,7 @@ import os
 import sys
 from time import sleep
 import struct
+from collections import namedtuple
 
 names = {
     'gen-blob':(0x000a0800,131072),
@@ -606,6 +607,17 @@ class NvidiaUsb(Usb):
   RTIMEOUT = 500
   WTIMEOUT = 300
 
+  _Part = namedtuple("Part", "num name typ start_sectors size_sectors sector")
+
+  class Part(_Part):
+    @property
+    def start(self):
+      return self.start_sectors * self.sector
+
+    @property
+    def size(self):
+      return self.size_sectors * self.sector
+
   def __init__(self):
     self.recv_ack_num = 0
     self.send_ack_num = 0
@@ -628,8 +640,12 @@ class NvidiaUsb(Usb):
     # ack was 0
     self.recv_ack_num = 1
 
+    _WTIMEOUT = self.WTIMEOUT
+    self.WTIMEOUT = 1000
+
     print 'sending loader'
     self.send_loader(loader)
+    self.WTIMEOUT = _WTIMEOUT
 
     #self.unk_1_11_0_18()
 
@@ -780,7 +796,10 @@ class NvidiaUsb(Usb):
     return size,off
 
 
-  def read_part(self, part, size):
+  def read_part(self, part, size=None):
+    if size == None:
+      size = self.part[part].size
+
     # actual read code
     self.send_cmd(1,1,0x14,0x11,part,0,0,size,0)
 
@@ -824,6 +843,60 @@ class NvidiaUsb(Usb):
     print self.recv_unpack() # wtf?
 
     self.send_ack()
+
+  def raw_parts(self):
+
+    self.cmd(1,0,0,0x13)
+    acks = self.recv_unpack() # wtf?
+    self.send_ack_num = acks[2]
+    print self.recv_unpack() # wtf?
+
+    print self.recv_unpack() # wtf?
+
+    self.send_ack()
+    print self.recv_unpack() # wtf?
+    ret = self.recv() # wtf?
+    print self.recv_unpack() # wtf?
+
+    self.send_ack()
+
+    print self.recv_unpack() # wtf?
+    self.send_ack()
+
+
+    return ret
+
+  def parts(self, force=False):
+    if force and hasattr(self, "_raw_parts"):
+      del self._raw_parts
+
+
+    if not hasattr(self, "_raw_parts"):
+      self._raw_parts = self.raw_parts()
+
+    raw = self._raw_parts
+
+    CHUNK = 32
+    off = 0
+    fmt = "I4sIIIIxx"
+
+    ret = []
+
+    while (len(raw) - off) >= CHUNK:
+      ret.append(self.Part._make(
+          struct.unpack_from(fmt, raw, offset=off)
+        )
+      )
+      off += CHUNK
+
+    return ret
+
+  @property
+  def part(self):
+    return dict(
+        [ (p.num, p) for p in self.parts()]
+    )
+
 
 if __name__ == '__main__':
   dev = MotoUsb()
