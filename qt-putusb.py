@@ -2,6 +2,7 @@ import sys
 import os
 import time
 import threading
+import Queue
 
 from PyQt4 import QtGui, QtCore
 
@@ -20,6 +21,14 @@ def connect(event):
     print "connected"
     event.set()
 
+
+@bg
+def collect_device_info(q):
+    for i in range(10):
+        q.put(i)
+        time.sleep(1)
+    q.put(None)
+
 class ConnectionWidget(QtGui.QWidget):
 
     def __init__(self, parent=None):
@@ -29,7 +38,7 @@ class ConnectionWidget(QtGui.QWidget):
 
         self.status = QtGui.QLabel("Not connected")
         # self.icon = QtGui.QImage(128, 128, QtGui.QImage.Format_RGB32)
-        self.icon = QtGui.QDial()
+        self.icon = QtGui.QDial(self)
         self.advice = QtGui.QLabel("Connect device...")
 
         vbox.addWidget(self.status)
@@ -42,7 +51,8 @@ class ConnectionWidget(QtGui.QWidget):
         print "showing connected"
         self.status.setText("Connected")
         # update icon
-        self.advice.setText("Device found")
+        self.advice.setText("Preparing...")
+
 
 class FlashingWidget(QtGui.QWidget):
 
@@ -50,14 +60,20 @@ class FlashingWidget(QtGui.QWidget):
         QtGui.QWidget.__init__(self, parent)
 
         hbox = QtGui.QHBoxLayout()
-
-        push1 = QtGui.QPushButton("Push 1")
-        push2 = QtGui.QPushButton("Push 2")
-
-        hbox.addWidget(push1)
-        hbox.addWidget(push2)
+        hbox.addWidget(QtGui.QLabel("Preparing partition info..."))
 
         self.setLayout(hbox)
+
+    def before_receiving_data(self):
+        self.layout = QtGui.QVBoxLayout()
+        self.setLayout(self.layout)
+
+    @bg
+    def add_partition_widgets(self, partition):
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel(str(partition)))
+        self.layout.addWidget(hbox)
+
 
 class PUWindow(QtGui.QMainWindow):
 
@@ -66,10 +82,12 @@ class PUWindow(QtGui.QMainWindow):
 
         self.setWindowTitle('PutUSB')
 
-class PUApplication(QtGui.QApplication):
+
+class PUApplication(QtGui.QApplication, threading.Thread):
 
     def __init__(self, args):
         QtGui.QApplication.__init__(self, args)
+        threading.Thread.__init__(self)
 
         self.win = PUWindow()
 
@@ -80,18 +98,30 @@ class PUApplication(QtGui.QApplication):
 
         self.win.show()
 
-    @bg
-    def run_(self):
+    def run(self):
 
-        wevent = threading.Event()
-        connect(wevent)
-        wevent.wait()
+        connect_evt = threading.Event()
+        connect(connect_evt)
+        connect_evt.wait()
 
         self.conn_widget.show_connected()
-        time.sleep(2)
+        time.sleep(1)
+        # self.conn_widget.dispose()
+
         self.win.setCentralWidget(self.flsh_widget)
 
+        self.flsh_widget.before_receiving_data()
+
+        q = Queue.Queue()
+        collect_device_info(q)
+        while True:
+            item = q.get()
+            if item is None:
+	            break
+            self.flsh_widget.add_partition_widgets(item)
+
+
 app = PUApplication(sys.argv)
-app.run_()
+app.start()
 sys.exit(app.exec_())
 
