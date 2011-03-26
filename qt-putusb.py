@@ -95,6 +95,10 @@ class FlashingWidget(QtGui.QWidget):
         print "add partition ", partition
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(QtGui.QLabel(str(partition['id'])))
+        hbox.addWidget(QtGui.QLabel(str(partition['label'])))
+        hbox.addWidget(QtGui.QProgressBar()))
+        hbox.addWidget(QtGui.QLabel(str(partition['path'])))
+        hbox.addWidget(QtGui.QPushButton('File...'))
         self.layout.addLayout(hbox)
 
 # ======================= PUWindow =============================================
