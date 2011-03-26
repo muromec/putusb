@@ -17,7 +17,7 @@ def bg(func):
 
 @bg
 def connect(event):
-    time.sleep(4)
+    time.sleep(3)
     print "connected"
     event.set()
 
@@ -48,7 +48,6 @@ class ConnectionWidget(QtGui.QWidget):
         self.setLayout(vbox)
 
     def show_connected(self):
-        print "showing connected"
         self.status.setText("Connected")
         # update icon
         self.advice.setText("Preparing...")
@@ -59,20 +58,14 @@ class FlashingWidget(QtGui.QWidget):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
 
-        hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Preparing partition info..."))
-
-        self.setLayout(hbox)
-
-    def before_receiving_data(self):
         self.layout = QtGui.QVBoxLayout()
         self.setLayout(self.layout)
 
-    @bg
     def add_partition_widgets(self, partition):
+        print "add partition ", partition
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(QtGui.QLabel(str(partition)))
-        self.layout.addWidget(hbox)
+        self.layout.addLayout(hbox)
 
 
 class PUWindow(QtGui.QMainWindow):
@@ -110,7 +103,12 @@ class PUApplication(QtGui.QApplication, threading.Thread):
 
         self.win.setCentralWidget(self.flsh_widget)
 
-        self.flsh_widget.before_receiving_data()
+        #got_partition_signal = QtCore.pyqtSignal(tuple)
+        #got_partition_signal.connect(self.flsh_widget.add_partition_widgets)
+        got_partition_signal = QtCore.SIGNAL('gotPData(PyQt_PyObject)')
+        self.connect(self, got_partition_signal, self.flsh_widget.add_partition_widgets)
+
+        print "asking for partition data"
 
         q = Queue.Queue()
         collect_device_info(q)
@@ -118,7 +116,8 @@ class PUApplication(QtGui.QApplication, threading.Thread):
             item = q.get()
             if item is None:
 	            break
-            self.flsh_widget.add_partition_widgets(item)
+            #self.flsh_widget.add_partition_widgets(item)
+            self.emit(got_partition_signal, item)
 
 
 app = PUApplication(sys.argv)
