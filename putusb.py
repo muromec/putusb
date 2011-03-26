@@ -630,7 +630,12 @@ class NvidiaUsb(Usb):
 
   def boot(self, pre, loader):
 
-    print 'uuid', self.recv().encode('hex')
+    try:
+      self.uuid = super(NvidiaUsb, self).recv()
+    except usb.USBError:
+      return
+
+    print 'uuid', self.uuid.encode('hex')
     print 'sending pre-loader'
     self.send_pre(pre)
 
@@ -641,7 +646,7 @@ class NvidiaUsb(Usb):
     self.recv_ack_num = 1
 
     _WTIMEOUT = self.WTIMEOUT
-    self.WTIMEOUT = 1000
+    self.WTIMEOUT = 2000
 
     print 'sending loader'
     self.send_loader(loader)
@@ -713,9 +718,13 @@ class NvidiaUsb(Usb):
 
     return self.send_pack(cs=True, *args)
 
-  def cmd(self, *args):
+  def cmd(self, *args, **kw):
     self.send_cmd(*args)
     self.recv_ack()
+
+    if kw.get("sync_ack"):
+      acks = self.recv_unpack() # wtf?
+      self.send_ack_num = acks[2]
 
   def send_pre(self, filename):
     f = open(filename, 'rb')
@@ -771,15 +780,8 @@ class NvidiaUsb(Usb):
 
 
   def part_info(self, part):
-    self.cmd(1,0,4,0xf,part) # 3 is for third part?
+    self.cmd(1,0,4,0xf,part,sync_ack=True) # 3 is for third part?
 
-    acks = self.recv_unpack() # 1, 2, send ack, recv ack(?)
-
-    print acks
-    print 's', self.send_ack_num
-    print 'r', self.send_ack_num
-
-    self.send_ack_num = acks[2]
     #self.recv_ack_num = acks[3]+1
 
     print 'partition info'
@@ -801,10 +803,7 @@ class NvidiaUsb(Usb):
       size = self.part[part].size
 
     # actual read code
-    self.send_cmd(1,1,0x14,0x11,part,0,0,size,0)
-
-    print self.recv_unpack() # its ack?
-    print self.recv_unpack() # wtf?
+    self.cmd(1,1,0x14,0x11,part,0,0,size,0,sync_ack=True)
 
     while size:
       chunk_size = min(LoadState.CHUNK, size)
@@ -846,9 +845,7 @@ class NvidiaUsb(Usb):
 
   def raw_parts(self):
 
-    self.cmd(1,0,0,0x13)
-    acks = self.recv_unpack() # wtf?
-    self.send_ack_num = acks[2]
+    self.cmd(1,0,0,0x13,sync_ack=True)
     print self.recv_unpack() # wtf?
 
     print self.recv_unpack() # wtf?
@@ -897,6 +894,9 @@ class NvidiaUsb(Usb):
         [ (p.num, p) for p in self.parts()]
     )
 
+  def format_part(self, part):
+    self.cmd(1, 0, 4, 0xd, part, sync_ack=True)
+    self.send_ack()
 
 if __name__ == '__main__':
   dev = MotoUsb()
