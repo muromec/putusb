@@ -15,19 +15,45 @@ def bg(func):
 
   return func_bg
 
+# ======================= connect ==============================================
+
 @bg
 def connect(event):
     time.sleep(3)
     print "connected"
     event.set()
 
+# ======================= collect_device_info ==================================
 
 @bg
 def collect_device_info(q):
-    for i in range(10):
-        q.put(i)
-        time.sleep(1)
+    q.put({ 'id': 2, 'path': '/dev/di2', 'size': 520, 'label': 'Unknown',
+            'ro': True, 'fixed': True })
+    time.sleep(1)
+    q.put({ 'id': 3, 'path': '/layout', 'size': 218, 'label': 'Layout',
+            'ro': True, 'fixed': True })
+    time.sleep(1)
+    q.put({ 'id': 4, 'path': '/dev/di4', 'size': 516, 'label': 'Unknown',
+            'ro': True, 'fixed': True })
+    time.sleep(2)
+    q.put({ 'id': 5, 'path': '/kernel1', 'size': 127, 'label': 'Kernel 1',
+            'ro': False, 'fixed': False })
+    time.sleep(1)
+    q.put({ 'id': 6, 'path': '/kernel2', 'size': 127, 'label': 'Kernel 2',
+            'ro': False, 'fixed': False })
+    time.sleep(1)
+    q.put({ 'id': 7, 'path': '/dev/di7', 'size': 127, 'label': 'Unknown',
+            'ro': True, 'fixed': True })
+    time.sleep(1)
+    q.put({ 'id': 8, 'path': '/root', 'size': 127, 'label': 'Root',
+            'ro': False, 'fixed': True })
+    time.sleep(3)
+    q.put({ 'id': 9, 'path': '/home', 'size': 127, 'label': 'Home',
+            'ro': False, 'fixed': True })
+    time.sleep(1)
     q.put(None)
+
+# ======================= ConnectionWidget =====================================
 
 class ConnectionWidget(QtGui.QWidget):
 
@@ -41,6 +67,9 @@ class ConnectionWidget(QtGui.QWidget):
         self.icon = QtGui.QDial(self)
         self.advice = QtGui.QLabel("Connect device...")
 
+        self.status.setAlignment(QtCore.Qt.AlignCenter)
+        self.advice.setAlignment(QtCore.Qt.AlignCenter)
+
         vbox.addWidget(self.status)
         vbox.addWidget(self.icon)
         vbox.addWidget(self.advice)
@@ -52,6 +81,7 @@ class ConnectionWidget(QtGui.QWidget):
         # update icon
         self.advice.setText("Preparing...")
 
+# ======================= FlashingWidget =======================================
 
 class FlashingWidget(QtGui.QWidget):
 
@@ -64,9 +94,10 @@ class FlashingWidget(QtGui.QWidget):
     def add_partition_widgets(self, partition):
         print "add partition ", partition
         hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel(str(partition)))
+        hbox.addWidget(QtGui.QLabel(str(partition['id'])))
         self.layout.addLayout(hbox)
 
+# ======================= PUWindow =============================================
 
 class PUWindow(QtGui.QMainWindow):
 
@@ -75,6 +106,7 @@ class PUWindow(QtGui.QMainWindow):
 
         self.setWindowTitle('PutUSB')
 
+# ======================= PUApplication ========================================
 
 class PUApplication(QtGui.QApplication, threading.Thread):
 
@@ -119,6 +151,7 @@ class PUApplication(QtGui.QApplication, threading.Thread):
             #self.flsh_widget.add_partition_widgets(item)
             self.emit(got_partition_signal, item)
 
+# ======================= main() ===============================================
 
 app = PUApplication(sys.argv)
 app.start()
