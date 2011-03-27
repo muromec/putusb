@@ -81,6 +81,30 @@ class ConnectionWidget(QtGui.QWidget):
         # update icon
         self.advice.setText("Preparing...")
 
+# ======================= PartitionRow =========================================
+
+class PartitionRow:
+
+    def __init__(self, partition):
+        self._partition = partition
+
+        self.id_lbl = QtGui.QLabel(str(partition['id']))
+        self.name_lbl = QtGui.QLabel(partition['label'])
+        self.path_lbl = QtGui.QLabel(partition['path'])
+        self.file_btn = QtGui.QLabel('Read-Only') if partition['ro'] \
+                        else QtGui.QPushButton('File...')
+        self.prgr_bar = QtGui.QProgressBar()
+        self.size_lbl = QtGui.QLabel('[' + str(partition['size']) + 'MB]' if partition['fixed'] \
+                                else '{' + str(partition['size']) + 'MB}')
+
+    def add_to_grid(self, grid, row_id):
+        grid.addWidget(self.id_lbl,   row_id, 0)
+        grid.addWidget(self.name_lbl, row_id, 1)
+        grid.addWidget(self.path_lbl, row_id, 2)
+        grid.addWidget(self.file_btn, row_id, 3)
+        grid.addWidget(self.prgr_bar, row_id, 4)
+        grid.addWidget(self.size_lbl, row_id, 5)
+
 # ======================= FlashingWidget =======================================
 
 class FlashingWidget(QtGui.QWidget):
@@ -91,19 +115,12 @@ class FlashingWidget(QtGui.QWidget):
         self.layout = QtGui.QGridLayout()
         self.setLayout(self.layout)
 
-        self._partitions = 0
+        self._partitions_num = 0
 
     def add_partition_widgets(self, partition):
         print "add partition ", partition
-        row = self._partitions
-        grid = self.layout
-        grid.addWidget(QtGui.QLabel(str(partition['id'])), row, 0)
-        grid.addWidget(QtGui.QLabel(partition['label']), row, 1)
-        grid.addWidget(QtGui.QLabel(partition['path']), row, 2)
-        grid.addWidget(QtGui.QPushButton('File...'), row, 3)
-        grid.addWidget(QtGui.QProgressBar(), row, 4)
-        grid.addWidget(QtGui.QLabel(str(partition['size'])), row, 5)
-        self._partitions += 1
+        PartitionRow(partition).add_to_grid(self.layout, self._partitions_num)
+        self._partitions_num += 1
 
 # ======================= PUWindow =============================================
 
