@@ -88,18 +88,22 @@ class FlashingWidget(QtGui.QWidget):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
 
-        self.layout = QtGui.QVBoxLayout()
+        self.layout = QtGui.QGridLayout()
         self.setLayout(self.layout)
+
+        self._partitions = 0
 
     def add_partition_widgets(self, partition):
         print "add partition ", partition
-        hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel(str(partition['id'])))
-        hbox.addWidget(QtGui.QLabel(str(partition['label'])))
-        hbox.addWidget(QtGui.QProgressBar())
-        hbox.addWidget(QtGui.QLabel(str(partition['path'])))
-        hbox.addWidget(QtGui.QPushButton('File...'))
-        self.layout.addLayout(hbox)
+        row = self._partitions
+        grid = self.layout
+        grid.addWidget(QtGui.QLabel(str(partition['id'])), row, 0)
+        grid.addWidget(QtGui.QLabel(partition['label']), row, 1)
+        grid.addWidget(QtGui.QLabel(partition['path']), row, 2)
+        grid.addWidget(QtGui.QPushButton('File...'), row, 3)
+        grid.addWidget(QtGui.QProgressBar(), row, 4)
+        grid.addWidget(QtGui.QLabel(str(partition['size'])), row, 5)
+        self._partitions += 1
 
 # ======================= PUWindow =============================================
 
