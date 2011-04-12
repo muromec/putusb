@@ -6,6 +6,8 @@ import Queue
 
 from PyQt4 import QtGui, QtCore
 
+import putusb
+
 def bg(func):
   def func_bg(*args):
 
@@ -16,14 +18,6 @@ def bg(func):
   return func_bg
 
 # ======================= connect ==============================================
-
-@bg
-def connect(event):
-    time.sleep(3)
-    print "connected"
-    event.set()
-
-# ======================= collect_device_info ==================================
 
 @bg
 def collect_device_info(q):
@@ -88,14 +82,14 @@ class PartitionRow:
     def __init__(self, partition):
         self._partition = partition
 
-        self.id_lbl = QtGui.QLabel(str(partition['id']))
-        self.name_lbl = QtGui.QLabel(partition['label'])
-        self.path_lbl = QtGui.QLabel(partition['path'])
-        self.file_btn = QtGui.QLabel('Read-Only') if partition['ro'] \
+        self.id_lbl = QtGui.QLabel(str(partition.num))
+        self.name_lbl = QtGui.QLabel(partition.name)
+        self.path_lbl = QtGui.QLabel(partition.name)
+        self.file_btn = QtGui.QLabel('Read-Only') if partition.typ == 0 \
                         else QtGui.QPushButton('File...')
         self.prgr_bar = QtGui.QProgressBar()
-        self.size_lbl = QtGui.QLabel('[' + str(partition['size']) + 'MB]' if partition['fixed'] \
-                                else '{' + str(partition['size']) + 'MB}')
+        self.size_lbl = QtGui.QLabel('[' + str(partition.size/1024/1024) + 'MB]' if partition.typ == 0 \
+                                else '{' + str(partition.size/1024/1024) + 'MB}')
 
     def add_to_grid(self, grid, row_id):
         grid.addWidget(self.id_lbl,   row_id, 0)
@@ -133,6 +127,21 @@ class PUWindow(QtGui.QMainWindow):
 
 # ======================= PUApplication ========================================
 
+class DevState(object):
+    def wait(self, event):
+        while True:
+            try:
+                self.dev = putusb.NvidiaUsb()
+                break
+            except IOError:
+                self.dev = None
+                time.sleep(1)
+
+        # deal with it
+        self.dev.boot("bin/tegra_pre_boot.bin", "bin/fastboot.stock.bin")
+
+        event.set()
+
 class PUApplication(QtGui.QApplication, threading.Thread):
 
     def __init__(self, args):
@@ -147,15 +156,16 @@ class PUApplication(QtGui.QApplication, threading.Thread):
         self.win.setCentralWidget(self.conn_widget)
 
         self.win.show()
+        self.state = DevState()
 
     def run(self):
 
         connect_evt = threading.Event()
-        connect(connect_evt)
+        bg(self.state.wait)(connect_evt)
         connect_evt.wait()
 
         self.conn_widget.show_connected()
-        time.sleep(1)
+        time.sleep(1) # wtf?
         # self.conn_widget.dispose()
 
         self.win.setCentralWidget(self.flsh_widget)
@@ -167,14 +177,8 @@ class PUApplication(QtGui.QApplication, threading.Thread):
 
         print "asking for partition data"
 
-        q = Queue.Queue()
-        collect_device_info(q)
-        while True:
-            item = q.get()
-            if item is None:
-	            break
-            #self.flsh_widget.add_partition_widgets(item)
-            self.emit(got_partition_signal, item)
+        for part in self.state.dev.parts():
+          self.emit(got_partition_signal, part)
 
 # ======================= main() ===============================================
 
