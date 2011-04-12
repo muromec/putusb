@@ -17,35 +17,6 @@ def bg(func):
 
   return func_bg
 
-# ======================= connect ==============================================
-
-@bg
-def collect_device_info(q):
-    q.put({ 'id': 2, 'path': '/dev/di2', 'size': 520, 'label': 'Unknown',
-            'ro': True, 'fixed': True })
-    time.sleep(1)
-    q.put({ 'id': 3, 'path': '/layout', 'size': 218, 'label': 'Layout',
-            'ro': True, 'fixed': True })
-    time.sleep(1)
-    q.put({ 'id': 4, 'path': '/dev/di4', 'size': 516, 'label': 'Unknown',
-            'ro': True, 'fixed': True })
-    time.sleep(2)
-    q.put({ 'id': 5, 'path': '/kernel1', 'size': 127, 'label': 'Kernel 1',
-            'ro': False, 'fixed': False })
-    time.sleep(1)
-    q.put({ 'id': 6, 'path': '/kernel2', 'size': 127, 'label': 'Kernel 2',
-            'ro': False, 'fixed': False })
-    time.sleep(1)
-    q.put({ 'id': 7, 'path': '/dev/di7', 'size': 127, 'label': 'Unknown',
-            'ro': True, 'fixed': True })
-    time.sleep(1)
-    q.put({ 'id': 8, 'path': '/root', 'size': 127, 'label': 'Root',
-            'ro': False, 'fixed': True })
-    time.sleep(3)
-    q.put({ 'id': 9, 'path': '/home', 'size': 127, 'label': 'Home',
-            'ro': False, 'fixed': True })
-    time.sleep(1)
-    q.put(None)
 
 # ======================= ConnectionWidget =====================================
 
@@ -77,24 +48,50 @@ class ConnectionWidget(QtGui.QWidget):
 
 # ======================= PartitionRow =========================================
 
-class PartitionRow:
+class PartitionRow(QtCore.QObject):
 
+    click = QtCore.SIGNAL('clicked()')
     def __init__(self, partition):
         self._partition = partition
 
         self.id_lbl = QtGui.QLabel(str(partition.num))
         self.name_lbl = QtGui.QLabel(partition.name)
-        self.path_lbl = QtGui.QLabel(partition.name)
-        self.file_btn = QtGui.QLabel('Read-Only') if partition.typ == 0 \
-                        else QtGui.QPushButton('File...')
+
+        if partition.typ:
+            self.file_btn = QtGui.QPushButton('File...')
+
+            self.connect(self.file_btn, self.click, self.select_file)
+        else:
+            self.file_btn = QtGui.QLabel('Read-Only')
+
         self.prgr_bar = QtGui.QProgressBar()
-        self.size_lbl = QtGui.QLabel('[' + str(partition.size/1024/1024) + 'MB]' if partition.typ == 0 \
-                                else '{' + str(partition.size/1024/1024) + 'MB}')
+
+        # be human-readable
+        fmt = "[%d %s]"
+        size = partition.size
+        if size > 1024*1024:
+          size /= 1024*1024
+          quant = "MB"
+        else:
+          size /= 1024
+          quant = "KB"
+
+        self.size_lbl = QtGui.QLabel(fmt % (size,quant))
+
+    def select_file(self,):
+        print 'select file'
+        fdialog = QtGui.QFileDialog()
+
+        if fdialog.exec_():
+          self.fname = unicode(fdialog.selectedFiles()[0])
+        else:
+          self.fname = None
+
+        print 'selected %s' % self.fname
 
     def add_to_grid(self, grid, row_id):
         grid.addWidget(self.id_lbl,   row_id, 0)
         grid.addWidget(self.name_lbl, row_id, 1)
-        grid.addWidget(self.path_lbl, row_id, 2)
         grid.addWidget(self.file_btn, row_id, 3)
         grid.addWidget(self.prgr_bar, row_id, 4)
         grid.addWidget(self.size_lbl, row_id, 5)
@@ -141,6 +138,27 @@ class DevState(object):
         self.dev.boot("bin/tegra_pre_boot.bin", "bin/fastboot.stock.bin")
 
         event.set()
+
+class MockDevState(object):
+    class MockUsb(object):
+        def parts(self):
+            return [
+                putusb.NvidiaUsb.Part(
+                  2,
+                  "RT",
+                  2,
+                  200,
+                  200,
+                  0x800
+                )
+            ]
+
+    def wait(self, event):
+        time.sleep(3)
+        self.dev = self.MockUsb()
+        event.set()
+
+DevState = MockDevState
 
 class PUApplication(QtGui.QApplication, threading.Thread):
 
