@@ -52,6 +52,8 @@ class PartitionRow(QtCore.QObject):
 
     click = QtCore.SIGNAL('clicked()')
     def __init__(self, partition):
+
+        super(PartitionRow, self).__init__()
         self._partition = partition
 
         self.id_lbl = QtGui.QLabel(str(partition.num))
@@ -78,6 +80,9 @@ class PartitionRow(QtCore.QObject):
 
         self.size_lbl = QtGui.QLabel(fmt % (size,quant))
 
+        self.fname = None
+
+
     def select_file(self,):
         print 'select file'
         fdialog = QtGui.QFileDialog()
@@ -88,6 +93,7 @@ class PartitionRow(QtCore.QObject):
           self.fname = None
 
         print 'selected %s' % self.fname
+        # TODO: check file size here and reject if bigger
 
     def add_to_grid(self, grid, row_id):
         grid.addWidget(self.id_lbl,   row_id, 0)
@@ -100,18 +106,44 @@ class PartitionRow(QtCore.QObject):
 
 class FlashingWidget(QtGui.QWidget):
 
+    flash = QtCore.SIGNAL("flash(int, QString)")
+
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
 
         self.layout = QtGui.QGridLayout()
         self.setLayout(self.layout)
 
-        self._partitions_num = 0
+        self._partitions_num = 1
+
+        self.partitions = []
+
+        self.commit_btn = QtGui.QPushButton('Commit')
+        # TODO: make it disable or hidden for the first time
+
+        click = QtCore.SIGNAL('clicked()')
+
+        self.connect(self.commit_btn, click , self.commit)
+
+        self.layout.addWidget(self.commit_btn, 20, 4)
 
     def add_partition_widgets(self, partition):
         print "add partition ", partition
-        PartitionRow(partition).add_to_grid(self.layout, self._partitions_num)
+        part = PartitionRow(partition)
+        part.add_to_grid(self.layout, self._partitions_num)
+        self.partitions.append(part)
+        # FIXME: maby append _partition?
+
         self._partitions_num += 1
+
+    def commit(self):
+        print 'commit all'
+
+        for part in self.partitions:
+          if part.fname is None:
+            continue
+
+          self.emit(self.flash, part._partition.num, part.fname)
 
 # ======================= PUWindow =============================================
 
@@ -153,6 +185,10 @@ class MockDevState(object):
                 )
             ]
 
+
+        def flash_part(self, num, fname):
+            print num, fname
+
     def wait(self, event):
         time.sleep(3)
         self.dev = self.MockUsb()
@@ -193,10 +229,17 @@ class PUApplication(QtGui.QApplication, threading.Thread):
         got_partition_signal = QtCore.SIGNAL('gotPData(PyQt_PyObject)')
         self.connect(self, got_partition_signal, self.flsh_widget.add_partition_widgets)
 
+        self.connect(self.flsh_widget, FlashingWidget.flash,
+            self.flash_part)
+
         print "asking for partition data"
 
         for part in self.state.dev.parts():
           self.emit(got_partition_signal, part)
+
+    def flash_part(self, num, fname):
+        # TODO: progress bar here
+        self.state.dev.flash_part(num, fname)
 
 # ======================= main() ===============================================
 
