@@ -194,7 +194,7 @@ class MockDevState(object):
         self.dev = self.MockUsb()
         event.set()
 
-DevState = MockDevState
+#DevState = MockDevState
 
 class PUApplication(QtGui.QApplication, threading.Thread):
 
