@@ -1,7 +1,27 @@
 import putusb
 
 dev = putusb.NvidiaUsb()
-dev.boot("bin/tegra_pre_boot.bin", "bin/fastboot.stock.bin")
+#dev.boot("bin/tegra_pre_boot.bin", "bin/fastboot.stock.bin")
+print putusb.Usb.recv(dev)
+f = open('dump_0.bin')
+dev.send(f.read())
+f.close()
+
+print dev.recv()
+
+dev.send_pre('bin/dump_1.bin')
+
+dev.cmd(1,1,4,4,0x0ff0)
+
+f = open('bin/dump_0.bin')
+dev.send(f.read())
+f.close()
+dev.send('\x6e\xa1\xff\xff')
+dev.send_ack()
+
+dev.send_loader('bin/dump_3.bin')
+
+
 
 print 'LOADED'
 
