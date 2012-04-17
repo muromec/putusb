@@ -39,6 +39,15 @@ setup(
     license = 'BSD',
     url='https://github.com/muromec/putusb',
     packages=['putusb'],
+    entry_points={
+          'console_scripts': [
+              'putusb = putusb.putusb:main',
+              'putusb-tegra = putusb.nv:main',
+          ],
+    },
+    install_requires=[
+        'pyusb'
+    ],
     long_description =
 """
 putusb is a utility by Ilya Petrov (muromec) for low-level communication with some Motorola smartphones and also Tegra devices. putusb runs on a host PC and communicates with the Tegra system (the AC100 in our case) through a dedicated USB port (the mini USB port on the AC100).

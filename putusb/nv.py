@@ -1,22 +1,33 @@
 import putusb
+import sys
 
-dev = putusb.NvidiaUsb()
-dev.boot("bin/tegra_pre_boot.bin", "bin/fastboot.stock.bin")
+def main():
+    try:
+        dev = putusb.NvidiaUsb()
+    except putusb.NoDev:
+        sys.stderr.write("No tegra device detected. Check device ownership and
+                cable\n")
+        sys.exit(1)
 
-print 'LOADED'
+    dev.boot("bin/tegra_pre_boot.bin", "bin/fastboot.stock.bin")
 
-part = 5
-"""
+    print 'LOADED'
 
-size, off = dev.part_info(part=part)
+    part = 5
+    """
 
-f = open("crap2", 'wb')
-f.truncate()
-map(f.write, dev.read_part(part,size))
-f.close()
-"""
+    size, off = dev.part_info(part=part)
 
-f = open("crap1", 'wb')
-f.truncate()
-map(f.write, dev.read_part(part) )
-f.close()
+    f = open("crap2", 'wb')
+    f.truncate()
+    map(f.write, dev.read_part(part,size))
+    f.close()
+    """
+
+    f = open("crap1", 'wb')
+    f.truncate()
+    map(f.write, dev.read_part(part) )
+    f.close()
+
+if __name__ == '__main__':
+    main()

@@ -5,6 +5,9 @@ from time import sleep
 import struct
 from collections import namedtuple
 
+class NoDev(IOError):
+    pass
+
 names = {
     'gen-blob':(0x000a0800,131072),
     'kernel':(0x000e0000,2097152),
@@ -115,7 +118,7 @@ class Usb(object):
         if self.dev:
           break
     else:
-      raise IOError("no device found")
+      raise NoDev("no device found")
 
   def __init__(self, vendor=None):
     self.find(vendor or self.VENDOR)
@@ -898,10 +901,15 @@ class NvidiaUsb(Usb):
     self.cmd(1, 0, 4, 0xd, part, sync_ack=True)
     self.send_ack()
 
-if __name__ == '__main__':
-  dev = MotoUsb()
+def main():
 
   import sys
+  try:
+    dev = MotoUsb()
+  except NoDev:
+    sys.stderr.write("No motoezx device detected! Check ownership and cable\n")
+    sys.exit(1)
+
 
   if len(sys.argv) == 2:
     cmd = sys.argv[1]
@@ -916,3 +924,6 @@ if __name__ == '__main__':
     data = None
 
   print dev.cmd(cmd, data)
+
+if __name__ == '__main__':
+    main()
