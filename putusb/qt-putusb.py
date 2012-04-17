@@ -6,7 +6,7 @@ import Queue
 
 from PyQt4 import QtGui, QtCore
 
-import putusb
+from putusb import putusb
 
 def bg(func):
   def func_bg(*args):

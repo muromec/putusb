@@ -5,7 +5,7 @@
 import sys
 import os
 from PyQt4 import QtGui, QtCore
-import putusb
+from putusb import putusb
 from threading import Thread, Lock
 
 from time import sleep
